@@ -6,7 +6,7 @@ Powered by Ollama for model inference and embeddings.
 """
 
 import httpx
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
@@ -15,7 +15,12 @@ from app import __version__
 from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import HealthResponse, ModelsResponse, ModelInfo
-from app.routers import inference, embeddings, rag
+from app.routers import inference, embeddings, rag, analytics
+from app.utils.monitoring import (
+    get_metrics_store,
+    MonitoringMiddleware,
+    export_prometheus_metrics
+)
 
 # Configure logging
 logging.basicConfig(
@@ -42,10 +47,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add monitoring middleware
+if settings.monitoring_enabled:
+    metrics_store = get_metrics_store(settings.metrics_retention_hours)
+    app.add_middleware(MonitoringMiddleware, metrics_store=metrics_store)
+    logger.info("Monitoring middleware enabled")
+
 # Include routers
 app.include_router(inference.router)
 app.include_router(embeddings.router)
 app.include_router(rag.router)
+app.include_router(analytics.router)
 
 
 @app.get("/", response_model=dict)
@@ -83,6 +95,18 @@ async def health_check():
         ollama_status=ollama_status,
         version=__version__,
     )
+
+
+@app.get("/metrics")
+async def metrics():
+    """
+    Prometheus metrics endpoint.
+
+    Returns metrics in Prometheus exposition format for scraping.
+    Use this endpoint with Prometheus or compatible monitoring tools.
+    """
+    metrics_data, content_type = export_prometheus_metrics()
+    return Response(content=metrics_data, media_type=content_type)
 
 
 @app.get("/models", response_model=ModelsResponse)

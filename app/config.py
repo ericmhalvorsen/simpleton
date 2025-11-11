@@ -39,6 +39,19 @@ class Settings(BaseSettings):
     chunk_overlap: int = 200
     top_k_results: int = 5
 
+    # Cache Configuration
+    redis_url: str = "redis://localhost:6379"
+    cache_enabled: bool = True
+    cache_ttl: int = 3600  # Default TTL in seconds (1 hour)
+    cache_embedding_ttl: int = 86400  # 24 hours for embeddings
+    cache_inference_ttl: int = 3600  # 1 hour for inference
+
+    # Monitoring Configuration
+    monitoring_enabled: bool = True
+    metrics_retention_hours: int = 168  # 7 days
+    alert_error_rate_threshold: float = 0.1  # 10% error rate
+    alert_response_time_threshold: float = 5.0  # 5 seconds
+
     @property
     def valid_api_keys(self) -> List[str]:
         """Parse API keys from comma-separated string"""
