@@ -18,22 +18,30 @@ A lightweight, self-hosted API service for running open-source LLMs with custom 
 ### Prerequisites
 
 - Docker and Docker Compose
+- [mise](https://mise.jdx.dev/) - Task runner (optional but recommended)
 - (Optional) NVIDIA GPU with Docker GPU support for better performance
 
 ### Installation
 
-1. Clone the repository:
+1. Install mise (optional but recommended):
+```bash
+curl https://mise.run | sh
+```
+
+2. Clone the repository:
 ```bash
 git clone <your-repo-url>
 cd simpleton
 ```
 
-2. Run the startup script:
+3. Start the service:
 ```bash
+mise run start
+# Or without mise:
 ./start.sh
 ```
 
-3. Edit `.env` and set your API keys:
+4. Edit `.env` and set your API keys:
 ```bash
 # Generate a secure key
 openssl rand -hex 32
@@ -42,9 +50,12 @@ openssl rand -hex 32
 API_KEYS=your-generated-key-here
 ```
 
-4. Pull your desired models:
+5. Pull your desired models:
 ```bash
-# For inference (choose based on your hardware)
+# Using mise
+mise run pull-models
+
+# Or manually
 docker exec -it simpleton-ollama ollama pull qwen2.5:7b
 docker exec -it simpleton-ollama ollama pull llama3.1:8b
 docker exec -it simpleton-ollama ollama pull mistral:7b
@@ -54,7 +65,7 @@ docker exec -it simpleton-ollama ollama pull nomic-embed-text
 docker exec -it simpleton-ollama ollama pull mxbai-embed-large
 ```
 
-5. Access the API:
+6. Access the API:
 - API: http://localhost:8000
 - Documentation: http://localhost:8000/docs
 - Ollama: http://localhost:11434
@@ -265,7 +276,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 3. Install dependencies:
 ```bash
-make install
+mise run install
 # Or manually:
 uv sync
 ```
@@ -278,7 +289,7 @@ cp .env.example .env
 
 5. Run the service:
 ```bash
-make run
+mise run run
 # Or manually:
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -286,11 +297,14 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### Local Development Commands
 
 ```bash
-make install      # Install dependencies
-make dev          # Install with dev dependencies (pytest, ruff)
-make run          # Run the service locally
-make lint         # Run linting
-make format       # Format code
+mise run install      # Install dependencies
+mise run dev          # Install with dev dependencies (pytest, ruff)
+mise run run          # Run the service locally
+mise run lint         # Run linting
+mise run format       # Format code
+
+# View all available tasks
+mise tasks
 ```
 
 ## GPU Support
@@ -360,9 +374,9 @@ simpleton/
 ├── .env.example         # Example configuration
 ├── .python-version      # Python version for uv
 ├── pyproject.toml       # Python dependencies and project metadata
+├── mise.toml            # Task runner configuration
 ├── Dockerfile           # Service container (uses uv)
 ├── docker-compose.yml   # Docker orchestration
-├── Makefile            # Convenient commands
 ├── start.sh            # Startup script
 └── example_client.py   # Example API client
 ```
@@ -370,15 +384,15 @@ simpleton/
 ### Running Tests
 ```bash
 # Install dev dependencies
-make dev
+mise run dev
 # Or manually:
 uv sync --extra dev
 
 # Run tests
 uv run pytest
 
-# Or via make
-make test
+# Or check API health
+mise run test
 ```
 
 ## Security Considerations
