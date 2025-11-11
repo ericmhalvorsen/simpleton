@@ -15,7 +15,7 @@ from app import __version__
 from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import HealthResponse, ModelsResponse, ModelInfo
-from app.routers import inference, embeddings
+from app.routers import inference, embeddings, rag
 
 # Configure logging
 logging.basicConfig(
@@ -45,6 +45,7 @@ app.add_middleware(
 # Include routers
 app.include_router(inference.router)
 app.include_router(embeddings.router)
+app.include_router(rag.router)
 
 
 @app.get("/", response_model=dict)

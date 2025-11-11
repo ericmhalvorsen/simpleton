@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # RAG Configuration
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""  # Optional for local deployments
+    default_collection: str = "documents"
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+    top_k_results: int = 5
+
     @property
     def valid_api_keys(self) -> List[str]:
         """Parse API keys from comma-separated string"""
