@@ -1,6 +1,7 @@
 """Inference endpoints for text generation"""
 
 import httpx
+import logging
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 import json
@@ -14,7 +15,10 @@ from app.models import (
     ChatRequest,
     ChatResponse,
 )
+from app.utils.cache import get_cache_client
+from app.utils.monitoring import CACHE_HITS, CACHE_MISSES
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/inference", tags=["inference"])
 
 
@@ -64,10 +68,13 @@ async def generate_text(
     if request.context:
         payload["context"] = request.context
 
+    # Initialize cache client
+    cache = get_cache_client(settings.redis_url, settings.cache_enabled)
+
     try:
         async with httpx.AsyncClient(timeout=300.0) as client:
             if request.stream:
-                # Streaming response
+                # Streaming responses are not cached
                 response = await client.post(
                     f"{settings.ollama_base_url}/api/generate",
                     json=payload,
@@ -79,13 +86,44 @@ async def generate_text(
                     media_type="text/event-stream",
                 )
             else:
-                # Non-streaming response
+                # Non-streaming response - check cache first
+                cache_key_data = {
+                    "model": model,
+                    "prompt": request.prompt,
+                    "temperature": request.temperature,
+                    "top_p": request.top_p,
+                    "top_k": request.top_k,
+                    "max_tokens": request.max_tokens,
+                    "system": request.system,
+                }
+
+                cached_response = cache.get("inference", cache_key_data)
+
+                if cached_response is not None:
+                    # Cache hit
+                    CACHE_HITS.labels(cache_type="inference").inc()
+                    logger.debug(f"Cache hit for inference (model: {model})")
+                    return InferenceResponse(**cached_response)
+
+                # Cache miss - call Ollama
+                CACHE_MISSES.labels(cache_type="inference").inc()
+                logger.debug(f"Cache miss for inference (model: {model})")
+
                 response = await client.post(
                     f"{settings.ollama_base_url}/api/generate",
                     json=payload,
                 )
                 response.raise_for_status()
                 data = response.json()
+
+                # Cache the response
+                cache.set(
+                    "inference",
+                    cache_key_data,
+                    data,
+                    ttl=settings.cache_inference_ttl
+                )
+
                 return InferenceResponse(**data)
 
     except httpx.HTTPStatusError as e:
@@ -135,10 +173,13 @@ async def chat_completion(
     if options:
         payload["options"] = options
 
+    # Initialize cache client
+    cache = get_cache_client(settings.redis_url, settings.cache_enabled)
+
     try:
         async with httpx.AsyncClient(timeout=300.0) as client:
             if request.stream:
-                # Streaming response
+                # Streaming responses are not cached
                 response = await client.post(
                     f"{settings.ollama_base_url}/api/chat",
                     json=payload,
@@ -150,13 +191,41 @@ async def chat_completion(
                     media_type="text/event-stream",
                 )
             else:
-                # Non-streaming response
+                # Non-streaming response - check cache first
+                cache_key_data = {
+                    "model": model,
+                    "messages": [msg.model_dump() for msg in request.messages],
+                    "temperature": request.temperature,
+                    "max_tokens": request.max_tokens,
+                }
+
+                cached_response = cache.get("chat", cache_key_data)
+
+                if cached_response is not None:
+                    # Cache hit
+                    CACHE_HITS.labels(cache_type="chat").inc()
+                    logger.debug(f"Cache hit for chat (model: {model})")
+                    return ChatResponse(**cached_response)
+
+                # Cache miss - call Ollama
+                CACHE_MISSES.labels(cache_type="chat").inc()
+                logger.debug(f"Cache miss for chat (model: {model})")
+
                 response = await client.post(
                     f"{settings.ollama_base_url}/api/chat",
                     json=payload,
                 )
                 response.raise_for_status()
                 data = response.json()
+
+                # Cache the response
+                cache.set(
+                    "chat",
+                    cache_key_data,
+                    data,
+                    ttl=settings.cache_inference_ttl
+                )
+
                 return ChatResponse(**data)
 
     except httpx.HTTPStatusError as e:

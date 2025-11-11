@@ -265,3 +265,80 @@ class CollectionDeleteResponse(BaseModel):
 
     collection: str = Field(..., description="Deleted collection name")
     success: bool = Field(..., description="Whether deletion was successful")
+
+
+# Vision Models
+class VisionAnalyzeRequest(BaseModel):
+    """Request model for vision analysis"""
+
+    image: str = Field(..., description="Base64 encoded image or image URL")
+    prompt: str = Field(..., description="Question or instruction about the image")
+    model: Optional[str] = Field(None, description="Vision model to use (defaults to llava)")
+    temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
+    max_tokens: Optional[int] = Field(None, gt=0, description="Maximum tokens to generate")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "image": "data:image/png;base64,iVBORw0KG...",
+                "prompt": "What objects are in this image?",
+                "model": "llava",
+                "temperature": 0.7
+            }
+        }
+
+
+class VisionAnalyzeResponse(BaseModel):
+    """Response model for vision analysis"""
+
+    model: str = Field(..., description="Model used for analysis")
+    response: str = Field(..., description="Generated description/answer")
+    done: bool = Field(..., description="Whether generation is complete")
+    total_duration: Optional[int] = Field(None, description="Total duration in nanoseconds")
+    eval_count: Optional[int] = Field(None, description="Number of tokens generated")
+
+
+class VisionCaptionRequest(BaseModel):
+    """Request model for image captioning"""
+
+    image: str = Field(..., description="Base64 encoded image or image URL")
+    model: Optional[str] = Field(None, description="Vision model to use (defaults to llava)")
+    detail_level: Optional[str] = Field("normal", description="Caption detail level: brief, normal, or detailed")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "image": "data:image/png;base64,iVBORw0KG...",
+                "model": "llava",
+                "detail_level": "normal"
+            }
+        }
+
+
+class VisionCaptionResponse(BaseModel):
+    """Response model for image captioning"""
+
+    caption: str = Field(..., description="Generated image caption")
+    model: str = Field(..., description="Model used for captioning")
+
+
+class VisionOCRRequest(BaseModel):
+    """Request model for OCR (text extraction from images)"""
+
+    image: str = Field(..., description="Base64 encoded image or image URL")
+    model: Optional[str] = Field(None, description="Vision model to use (defaults to llava)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "image": "data:image/png;base64,iVBORw0KG...",
+                "model": "llava"
+            }
+        }
+
+
+class VisionOCRResponse(BaseModel):
+    """Response model for OCR"""
+
+    text: str = Field(..., description="Extracted text from image")
+    model: str = Field(..., description="Model used for OCR")

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Default Models
     default_inference_model: str = "qwen2.5:7b"
     default_embedding_model: str = "nomic-embed-text"
+    default_vision_model: str = "llava"
 
     # Server Configuration
     host: str = "0.0.0.0"

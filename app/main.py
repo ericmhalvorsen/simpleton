@@ -15,7 +15,7 @@ from app import __version__
 from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import HealthResponse, ModelsResponse, ModelInfo
-from app.routers import inference, embeddings, rag, analytics
+from app.routers import inference, embeddings, rag, analytics, vision
 from app.utils.monitoring import (
     get_metrics_store,
     MonitoringMiddleware,
@@ -58,6 +58,7 @@ app.include_router(inference.router)
 app.include_router(embeddings.router)
 app.include_router(rag.router)
 app.include_router(analytics.router)
+app.include_router(vision.router)
 
 
 @app.get("/", response_model=dict)

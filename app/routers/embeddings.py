@@ -1,13 +1,17 @@
 """Embeddings endpoints for vector generation"""
 
 import httpx
+import logging
 from fastapi import APIRouter, HTTPException, status
 from typing import List
 
 from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import EmbeddingRequest, EmbeddingResponse
+from app.utils.cache import get_cache_client
+from app.utils.monitoring import CACHE_HITS, CACHE_MISSES
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/embeddings", tags=["embeddings"])
 
 
@@ -33,13 +37,31 @@ async def create_embeddings(
     # Convert single input to list for consistent processing
     texts = [request.input] if isinstance(request.input, str) else request.input
 
+    # Initialize cache client
+    cache = get_cache_client(settings.redis_url, settings.cache_enabled)
+
     try:
         embeddings = []
         total_duration = 0
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            # Process each text
-            for text in texts:
+        # Process each text (with caching)
+        for text in texts:
+            # Check cache first
+            cache_key_data = {"model": model, "text": text}
+            cached_embedding = cache.get("embedding", cache_key_data)
+
+            if cached_embedding is not None:
+                # Cache hit
+                CACHE_HITS.labels(cache_type="embedding").inc()
+                logger.debug(f"Cache hit for embedding (model: {model})")
+                embeddings.append(cached_embedding)
+                continue
+
+            # Cache miss - call Ollama
+            CACHE_MISSES.labels(cache_type="embedding").inc()
+            logger.debug(f"Cache miss for embedding (model: {model})")
+
+            async with httpx.AsyncClient(timeout=120.0) as client:
                 payload = {
                     "model": model,
                     "prompt": text,
@@ -52,9 +74,19 @@ async def create_embeddings(
                 response.raise_for_status()
                 data = response.json()
 
-                embeddings.append(data["embedding"])
+                embedding = data["embedding"]
+                embeddings.append(embedding)
+
                 if "total_duration" in data:
                     total_duration += data["total_duration"]
+
+                # Cache the embedding
+                cache.set(
+                    "embedding",
+                    cache_key_data,
+                    embedding,
+                    ttl=settings.cache_embedding_ttl
+                )
 
         return EmbeddingResponse(
             model=model,
