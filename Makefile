@@ -1,8 +1,9 @@
-.PHONY: help start stop restart logs build clean pull-models test
+.PHONY: help start stop restart logs build clean pull-models test install dev run
 
 help:
 	@echo "Simpleton LLM Service - Available Commands:"
 	@echo ""
+	@echo "Docker Commands:"
 	@echo "  make start        - Start all services"
 	@echo "  make stop         - Stop all services"
 	@echo "  make restart      - Restart all services"
@@ -11,6 +12,11 @@ help:
 	@echo "  make clean        - Stop and remove all containers/volumes"
 	@echo "  make pull-models  - Pull recommended models"
 	@echo "  make test         - Run basic API tests"
+	@echo ""
+	@echo "Local Development (uv):"
+	@echo "  make install      - Install dependencies with uv"
+	@echo "  make dev          - Install with dev dependencies"
+	@echo "  make run          - Run locally (requires Ollama)"
 	@echo ""
 
 start:
@@ -64,3 +70,26 @@ shell-ollama:
 test:
 	@echo "Testing API health..."
 	@curl -s http://localhost:8000/health | python -m json.tool || echo "API not responding"
+
+# Local development with uv
+install:
+	@echo "Installing dependencies with uv..."
+	@command -v uv >/dev/null 2>&1 || { echo "uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
+	uv sync
+
+dev:
+	@echo "Installing with dev dependencies..."
+	@command -v uv >/dev/null 2>&1 || { echo "uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
+	uv sync --extra dev
+
+run:
+	@echo "Running Simpleton locally..."
+	@command -v ollama >/dev/null 2>&1 || { echo "Ollama not found. Install from https://ollama.com"; exit 1; }
+	@echo "Make sure Ollama is running: ollama serve"
+	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+lint:
+	uv run ruff check app/
+
+format:
+	uv run ruff format app/

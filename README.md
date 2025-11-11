@@ -10,6 +10,7 @@ A lightweight, self-hosted API service for running open-source LLMs with custom 
 - **Embeddings**: Generate vector embeddings for RAG, semantic search, and more
 - **Model Management**: List and manage available models
 - **Easy Deployment**: Docker Compose setup with Ollama included
+- **Fast Development**: Uses [uv](https://github.com/astral-sh/uv) for blazing-fast dependency management (10-100x faster than pip)
 - **OpenAPI Documentation**: Auto-generated API docs at `/docs`
 
 ## Quick Start
@@ -242,28 +243,54 @@ LOG_LEVEL=INFO
 
 All authenticated endpoints require the `X-API-Key` header.
 
-## Running Without Docker
+## Running Without Docker (Local Development with uv)
 
-If you prefer to run without Docker:
+For local development, we use [uv](https://github.com/astral-sh/uv) - an extremely fast Python package installer and resolver.
 
-1. Install Ollama: https://ollama.com/download
+### Why uv?
 
-2. Install Python dependencies:
+- **10-100x faster** than pip
+- **Built-in virtual environment** management
+- **Deterministic** dependency resolution
+- **Drop-in replacement** for pip
+
+### Setup
+
+1. Install uv:
 ```bash
-pip install -r requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-3. Create `.env` file:
+2. Install Ollama: https://ollama.com/download
+
+3. Install dependencies:
+```bash
+make install
+# Or manually:
+uv sync
+```
+
+4. Create `.env` file:
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
-4. Run the service:
+5. Run the service:
 ```bash
-python -m app.main
-# Or with uvicorn
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+make run
+# Or manually:
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Local Development Commands
+
+```bash
+make install      # Install dependencies
+make dev          # Install with dev dependencies (pytest, ruff)
+make run          # Run the service locally
+make lint         # Run linting
+make format       # Format code
 ```
 
 ## GPU Support
@@ -331,19 +358,27 @@ simpleton/
 │       └── embeddings.py # Embedding endpoints
 ├── .env                  # Environment variables
 ├── .env.example         # Example configuration
-├── requirements.txt      # Python dependencies
-├── Dockerfile           # Service container
+├── .python-version      # Python version for uv
+├── pyproject.toml       # Python dependencies and project metadata
+├── Dockerfile           # Service container (uses uv)
 ├── docker-compose.yml   # Docker orchestration
-└── start.sh            # Startup script
+├── Makefile            # Convenient commands
+├── start.sh            # Startup script
+└── example_client.py   # Example API client
 ```
 
 ### Running Tests
 ```bash
 # Install dev dependencies
-pip install pytest pytest-asyncio httpx
+make dev
+# Or manually:
+uv sync --extra dev
 
 # Run tests
-pytest
+uv run pytest
+
+# Or via make
+make test
 ```
 
 ## Security Considerations

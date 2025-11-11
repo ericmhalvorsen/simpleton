@@ -125,6 +125,23 @@ docker exec simpleton-ollama ollama list
 - Try different models from https://ollama.com/library
 - Build your own applications using the API!
 
+## Want to Run Locally Without Docker?
+
+For local development with maximum performance:
+
+```bash
+# Install uv (super fast Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+make install
+
+# Run locally (requires Ollama installed separately)
+make run
+```
+
+See the [README.md](README.md) "Running Without Docker" section for details.
+
 ## Need Help?
 
 Check the troubleshooting section in README.md or open an issue.
