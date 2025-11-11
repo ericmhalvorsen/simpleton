@@ -1,17 +1,8 @@
 # Simpleton - Personal LLM Service
 
-A lightweight, self-hosted API service for running open-source LLMs with custom authentication. Built on FastAPI and powered by Ollama, Simpleton gives you a private inference and embedding endpoint for all your AI needs.
+A self-hosted API service for running open-source LLMs. Built on FastAPI and Ollama.
 
-## Features
-
-- **Custom Authentication**: Secure your API with custom API keys
-- **Text Generation**: Generate completions from prompts with streaming support
-- **Chat Interface**: Multi-turn conversations with system prompts
-- **Embeddings**: Generate vector embeddings for RAG, semantic search, and more
-- **Model Management**: List and manage available models
-- **Easy Deployment**: Docker Compose setup with Ollama included
-- **Fast Development**: Uses [uv](https://github.com/astral-sh/uv) for blazing-fast dependency management (10-100x faster than pip)
-- **OpenAPI Documentation**: Auto-generated API docs at `/docs`
+Redo this whole thing
 
 ## Quick Start
 
