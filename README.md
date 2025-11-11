@@ -10,6 +10,7 @@ A lightweight, self-hosted API service for running open-source LLMs with custom 
 - **Embeddings**: Generate vector embeddings for RAG, semantic search, and more
 - **Model Management**: List and manage available models
 - **Easy Deployment**: Docker Compose setup with Ollama included
+- **Fast Development**: Uses [uv](https://github.com/astral-sh/uv) for blazing-fast dependency management (10-100x faster than pip)
 - **OpenAPI Documentation**: Auto-generated API docs at `/docs`
 
 ## Quick Start
@@ -17,22 +18,30 @@ A lightweight, self-hosted API service for running open-source LLMs with custom 
 ### Prerequisites
 
 - Docker and Docker Compose
+- [mise](https://mise.jdx.dev/) - Task runner (optional but recommended)
 - (Optional) NVIDIA GPU with Docker GPU support for better performance
 
 ### Installation
 
-1. Clone the repository:
+1. Install mise (optional but recommended):
+```bash
+curl https://mise.run | sh
+```
+
+2. Clone the repository:
 ```bash
 git clone <your-repo-url>
 cd simpleton
 ```
 
-2. Run the startup script:
+3. Start the service:
 ```bash
+mise run start
+# Or without mise:
 ./start.sh
 ```
 
-3. Edit `.env` and set your API keys:
+4. Edit `.env` and set your API keys:
 ```bash
 # Generate a secure key
 openssl rand -hex 32
@@ -41,9 +50,12 @@ openssl rand -hex 32
 API_KEYS=your-generated-key-here
 ```
 
-4. Pull your desired models:
+5. Pull your desired models:
 ```bash
-# For inference (choose based on your hardware)
+# Using mise
+mise run pull-models
+
+# Or manually
 docker exec -it simpleton-ollama ollama pull qwen2.5:7b
 docker exec -it simpleton-ollama ollama pull llama3.1:8b
 docker exec -it simpleton-ollama ollama pull mistral:7b
@@ -53,7 +65,7 @@ docker exec -it simpleton-ollama ollama pull nomic-embed-text
 docker exec -it simpleton-ollama ollama pull mxbai-embed-large
 ```
 
-5. Access the API:
+6. Access the API:
 - API: http://localhost:8000
 - Documentation: http://localhost:8000/docs
 - Ollama: http://localhost:11434
@@ -242,28 +254,57 @@ LOG_LEVEL=INFO
 
 All authenticated endpoints require the `X-API-Key` header.
 
-## Running Without Docker
+## Running Without Docker (Local Development with uv)
 
-If you prefer to run without Docker:
+For local development, we use [uv](https://github.com/astral-sh/uv) - an extremely fast Python package installer and resolver.
 
-1. Install Ollama: https://ollama.com/download
+### Why uv?
 
-2. Install Python dependencies:
+- **10-100x faster** than pip
+- **Built-in virtual environment** management
+- **Deterministic** dependency resolution
+- **Drop-in replacement** for pip
+
+### Setup
+
+1. Install uv:
 ```bash
-pip install -r requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-3. Create `.env` file:
+2. Install Ollama: https://ollama.com/download
+
+3. Install dependencies:
+```bash
+mise run install
+# Or manually:
+uv sync
+```
+
+4. Create `.env` file:
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
-4. Run the service:
+5. Run the service:
 ```bash
-python -m app.main
-# Or with uvicorn
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+mise run run
+# Or manually:
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Local Development Commands
+
+```bash
+mise run install      # Install dependencies
+mise run dev          # Install with dev dependencies (pytest, ruff)
+mise run run          # Run the service locally
+mise run lint         # Run linting
+mise run format       # Format code
+
+# View all available tasks
+mise tasks
 ```
 
 ## GPU Support
@@ -331,19 +372,27 @@ simpleton/
 │       └── embeddings.py # Embedding endpoints
 ├── .env                  # Environment variables
 ├── .env.example         # Example configuration
-├── requirements.txt      # Python dependencies
-├── Dockerfile           # Service container
+├── .python-version      # Python version for uv
+├── pyproject.toml       # Python dependencies and project metadata
+├── mise.toml            # Task runner configuration
+├── Dockerfile           # Service container (uses uv)
 ├── docker-compose.yml   # Docker orchestration
-└── start.sh            # Startup script
+├── start.sh            # Startup script
+└── example_client.py   # Example API client
 ```
 
 ### Running Tests
 ```bash
 # Install dev dependencies
-pip install pytest pytest-asyncio httpx
+mise run dev
+# Or manually:
+uv sync --extra dev
 
 # Run tests
-pytest
+uv run pytest
+
+# Or check API health
+mise run test
 ```
 
 ## Security Considerations

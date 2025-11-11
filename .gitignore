@@ -43,6 +43,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 develop-eggs/
@@ -59,6 +60,9 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# uv
+.python-version.lock
 
 # IDE
 .vscode/

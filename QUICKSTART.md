@@ -5,12 +5,11 @@ Get Simpleton running in 5 minutes!
 ## Step 1: Start the Service
 
 ```bash
-./start.sh
-```
+# Using mise (recommended)
+mise run start
 
-Or using Make:
-```bash
-make start
+# Or using the script directly
+./start.sh
 ```
 
 ## Step 2: Configure Your API Key
@@ -27,7 +26,7 @@ API_KEYS=your-generated-key-here
 
 3. Restart the service:
 ```bash
-make restart
+mise run restart
 ```
 
 ## Step 3: Pull Models
@@ -83,17 +82,20 @@ curl -X POST http://localhost:8000/inference/generate \
 ## Useful Commands
 
 ```bash
+# View all available tasks
+mise tasks
+
 # View logs
-make logs
+mise run logs
 
 # List available models
-make list-models
+mise run list-models
 
 # Stop the service
-make stop
+mise run stop
 
 # Restart the service
-make restart
+mise run restart
 ```
 
 ## Troubleshooting
@@ -115,7 +117,7 @@ docker exec simpleton-ollama ollama list
 ### "Invalid API Key"
 
 1. Check your `.env` file has `API_KEYS` set
-2. Restart the service: `make restart`
+2. Restart the service: `mise run restart`
 3. Make sure your request includes the `X-API-Key` header
 
 ## Next Steps
@@ -124,6 +126,23 @@ docker exec simpleton-ollama ollama list
 - Explore the API at http://localhost:8000/docs
 - Try different models from https://ollama.com/library
 - Build your own applications using the API!
+
+## Want to Run Locally Without Docker?
+
+For local development with maximum performance:
+
+```bash
+# Install mise (task runner)
+curl https://mise.run | sh
+
+# Install dependencies
+mise run install
+
+# Run locally (requires Ollama installed separately)
+mise run run
+```
+
+See the [README.md](README.md) "Running Without Docker" section for details.
 
 ## Need Help?
 
