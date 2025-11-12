@@ -19,6 +19,28 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  # Qdrant vector database - for RAG/semantic search
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: simpleton-qdrant
+    ports:
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  # Redis - for caching and metrics storage
+  redis:
+    image: redis:7-alpine
+    container_name: simpleton-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
   # Simpleton API service
   simpleton:
     build: .
@@ -28,12 +50,20 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_HOST=http://ollama:11434
+      - QDRANT_URL=http://qdrant:6333
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env
     depends_on:
       - ollama
+      - qdrant
+      - redis
     restart: unless-stopped
 
 volumes:
   ollama_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  redis_data:
     driver: local
