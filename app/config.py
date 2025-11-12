@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # Notification Configuration
     notifications_enabled: bool = True
     ntfy_url: str = "http://localhost:8080"  # Use http://ntfy:80 inside Docker
-    ntfy_topic: str = ""  # Your unique topic name (e.g., simpleton-alerts-xyz123)
+    ntfy_topic: str = ""  # Your topic name (e.g., simpleton-alerts)
     notify_on_startup: bool = True
     notify_on_alerts: bool = True
     notify_on_requests: bool = False  # Set to True to get notified on every API call

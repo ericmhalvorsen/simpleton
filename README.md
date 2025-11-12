@@ -656,12 +656,10 @@ ntfy will be available at:
 
 #### 2. Choose Your Topic Name
 
-Pick a unique topic name (this is like a channel for your notifications):
+Pick a topic name (this is like a channel for your notifications):
 ```
-simpleton-alerts-yourname123
+simpleton-alerts
 ```
-
-Keep it unique to prevent conflicts with others using the same ntfy server.
 
 #### 3. Install Mobile App
 
@@ -673,8 +671,8 @@ Download the ntfy app:
 
 In the app:
 1. Tap "+" to add a subscription
-2. Enter your server URL: `http://YOUR-SERVER-IP:8080/simpleton-alerts-yourname123`
-   - For local testing: `http://192.168.1.X:8080/simpleton-alerts-yourname123`
+2. Enter your server URL: `http://YOUR-SERVER-IP:8080/simpleton-alerts`
+   - For local testing: `http://192.168.1.X:8080/simpleton-alerts`
 3. Done! You'll now receive notifications
 
 #### 5. Configure Simpleton
@@ -685,7 +683,7 @@ Edit your `.env` file:
 # Notification Configuration
 NOTIFICATIONS_ENABLED=true
 NTFY_URL=http://ntfy:80                      # Inside Docker
-NTFY_TOPIC=simpleton-alerts-yourname123      # Your unique topic
+NTFY_TOPIC=simpleton-alerts                  # Your topic
 NOTIFY_ON_STARTUP=true
 NOTIFY_ON_ALERTS=true
 NOTIFY_ON_REQUESTS=false                     # Set to true for all requests
@@ -741,7 +739,7 @@ NOTIFICATIONS_ENABLED=true
 
 # ntfy Configuration (self-hosted)
 NTFY_URL=http://ntfy:80
-NTFY_TOPIC=simpleton-alerts-yourname123
+NTFY_TOPIC=simpleton-alerts
 
 # Notification Types
 NOTIFY_ON_STARTUP=true      # Service starts/stops
@@ -827,7 +825,7 @@ curl http://localhost:8080/health
 
 2. Test ntfy directly:
 ```bash
-curl -d "Test message" http://localhost:8080/simpleton-alerts-yourname123
+curl -d "Test message" http://localhost:8080/simpleton-alerts
 ```
 
 3. Check Simpleton logs:
