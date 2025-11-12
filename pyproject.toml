@@ -34,6 +34,9 @@ dependencies = [
     "redis>=5.0.0",
     "prometheus-client>=0.19.0",
     "pillow>=10.0.0",  # For vision/image processing
+    # Audio processing
+    "faster-whisper>=0.10.0",  # For audio transcription
+    "ffmpeg-python>=0.2.0",  # For audio format conversion
 ]
 
 [project.optional-dependencies]

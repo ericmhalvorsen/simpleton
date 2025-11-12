@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     default_inference_model: str = "qwen2.5:7b"
     default_embedding_model: str = "nomic-embed-text"
     default_vision_model: str = "llava"
+    default_audio_model: str = "base"  # Whisper model size: tiny, base, small, medium, large
 
     # Server Configuration
     host: str = "0.0.0.0"

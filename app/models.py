@@ -342,3 +342,56 @@ class VisionOCRResponse(BaseModel):
 
     text: str = Field(..., description="Extracted text from image")
     model: str = Field(..., description="Model used for OCR")
+
+
+# Audio Models
+class AudioTranscribeRequest(BaseModel):
+    """Request model for audio transcription"""
+
+    audio: str = Field(..., description="Base64 encoded audio file")
+    language: Optional[str] = Field(None, description="Language code (e.g., 'en', 'es', 'fr'). Auto-detect if not specified")
+    model: Optional[str] = Field(None, description="Whisper model size (tiny, base, small, medium, large)")
+    task: Optional[str] = Field("transcribe", description="Task type: 'transcribe' or 'translate' (to English)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "audio": "data:audio/wav;base64,UklGRi...",
+                "language": "en",
+                "model": "base",
+                "task": "transcribe"
+            }
+        }
+
+
+class AudioTranscribeResponse(BaseModel):
+    """Response model for audio transcription"""
+
+    text: str = Field(..., description="Transcribed text")
+    language: Optional[str] = Field(None, description="Detected or specified language")
+    duration: Optional[float] = Field(None, description="Audio duration in seconds")
+    model: str = Field(..., description="Model used for transcription")
+
+
+class AudioTranslateRequest(BaseModel):
+    """Request model for audio translation to English"""
+
+    audio: str = Field(..., description="Base64 encoded audio file")
+    model: Optional[str] = Field(None, description="Whisper model size (tiny, base, small, medium, large)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "audio": "data:audio/wav;base64,UklGRi...",
+                "model": "base"
+            }
+        }
+
+
+class AudioTranslateResponse(BaseModel):
+    """Response model for audio translation"""
+
+    text: str = Field(..., description="Translated text (in English)")
+    source_language: Optional[str] = Field(None, description="Detected source language")
+    duration: Optional[float] = Field(None, description="Audio duration in seconds")
+    model: str = Field(..., description="Model used for translation")
