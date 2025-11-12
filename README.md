@@ -61,6 +61,7 @@ docker exec -it simpleton-ollama ollama pull mxbai-embed-large
 - Documentation: http://localhost:8000/docs
 - Ollama: http://localhost:11434
 - Qdrant Dashboard: http://localhost:6333/dashboard
+- ntfy (Notifications): http://localhost:8080
 
 ## Model Recommendations
 
@@ -215,15 +216,18 @@ Simpleton includes a powerful RAG pipeline with Qdrant vector database integrati
 
 ### RAG Architecture
 
-The system uses three containers:
+The system uses multiple containers:
 - **Simpleton API** - Orchestrates RAG operations
 - **Ollama** - Generates embeddings and LLM responses
 - **Qdrant** - Stores document embeddings (vector database)
+- **Redis** - Caching and metrics storage
+- **ntfy** - Self-hosted notification service
 
 Access points:
 - Simpleton API: http://localhost:8000
 - Qdrant API: http://localhost:6333
 - Qdrant Dashboard: http://localhost:6333/dashboard
+- ntfy: http://localhost:8080
 
 ### Quick Start with RAG
 
@@ -624,6 +628,225 @@ print(f"Language: {result['language']}")
    - Longer audio = longer processing time
    - Consider splitting very long files (>1 hour)
 
+## Notifications
+
+Simpleton includes a self-hosted notification system using **ntfy** to keep you informed about system events and alerts.
+
+### Features
+
+- **Startup/Shutdown Notifications**: Know when your service starts or stops
+- **Alert Notifications**: Get notified when error rates or response times exceed thresholds
+- **Request Notifications** (optional): Track every API call in real-time
+- **Self-Hosted**: 100% private, no data leaves your server
+- **Mobile Apps**: iOS and Android apps available
+
+### Quick Setup
+
+#### 1. Start the Services
+
+ntfy is included in `docker-compose.yml` and starts automatically:
+
+```bash
+docker-compose up -d
+```
+
+ntfy will be available at:
+- **Inside Docker**: `http://ntfy:80`
+- **From your computer**: `http://localhost:8080`
+
+#### 2. Choose Your Topic Name
+
+Pick a unique topic name (this is like a channel for your notifications):
+```
+simpleton-alerts-yourname123
+```
+
+Keep it unique to prevent conflicts with others using the same ntfy server.
+
+#### 3. Install Mobile App
+
+Download the ntfy app:
+- **Android**: [Google Play Store](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
+- **iOS**: [App Store](https://apps.apple.com/us/app/ntfy/id1625396347)
+
+#### 4. Subscribe to Your Topic
+
+In the app:
+1. Tap "+" to add a subscription
+2. Enter your server URL: `http://YOUR-SERVER-IP:8080/simpleton-alerts-yourname123`
+   - For local testing: `http://192.168.1.X:8080/simpleton-alerts-yourname123`
+3. Done! You'll now receive notifications
+
+#### 5. Configure Simpleton
+
+Edit your `.env` file:
+
+```bash
+# Notification Configuration
+NOTIFICATIONS_ENABLED=true
+NTFY_URL=http://ntfy:80                      # Inside Docker
+NTFY_TOPIC=simpleton-alerts-yourname123      # Your unique topic
+NOTIFY_ON_STARTUP=true
+NOTIFY_ON_ALERTS=true
+NOTIFY_ON_REQUESTS=false                     # Set to true for all requests
+```
+
+#### 6. Test Notifications
+
+```bash
+curl -X POST http://localhost:8000/analytics/notifications/test \
+  -H "X-API-Key: your-api-key"
+```
+
+You should receive a test notification on your phone!
+
+### Notification Types
+
+#### Startup Notifications 🚀
+Sent when Simpleton starts:
+```
+🚀 Simpleton Started
+Service is now running at http://0.0.0.0:8000
+Started at 2025-11-12 10:30:00
+```
+
+#### Alert Notifications ⚠️
+Sent when thresholds are exceeded:
+```
+⚠️ Alert: high_error_rate
+Error rate is 15.2% (threshold: 10.0%)
+```
+
+```
+⚠️ Alert: high_response_time
+Average response time is 6.45s (threshold: 5.0s)
+```
+
+#### Request Notifications 🔔 (Optional)
+Track API usage in real-time (enable with `NOTIFY_ON_REQUESTS=true`):
+```
+🔔 API Request: POST /inference/generate
+Status: 200
+Duration: 1.234s
+Time: 14:32:15
+```
+
+### Configuration Options
+
+Add to your `.env` file:
+
+```bash
+# Enable/disable all notifications
+NOTIFICATIONS_ENABLED=true
+
+# ntfy Configuration (self-hosted)
+NTFY_URL=http://ntfy:80
+NTFY_TOPIC=simpleton-alerts-yourname123
+
+# Notification Types
+NOTIFY_ON_STARTUP=true      # Service starts/stops
+NOTIFY_ON_ALERTS=true       # Error rate or latency alerts
+NOTIFY_ON_REQUESTS=false    # Every API request (can be noisy!)
+
+# Optional: Telegram Support
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+```
+
+### Alert Thresholds
+
+Configure when to send alerts (in `.env`):
+
+```bash
+# Alert if error rate exceeds 10%
+ALERT_ERROR_RATE_THRESHOLD=0.1
+
+# Alert if response time exceeds 5 seconds
+ALERT_RESPONSE_TIME_THRESHOLD=5.0
+```
+
+Alerts are checked when you call `/analytics/alerts` endpoint.
+
+### Using ntfy Web Interface
+
+Access ntfy web UI at `http://localhost:8080`:
+- View all messages in your browser
+- No app installation needed
+- Useful for debugging
+
+### Accessing Remotely
+
+To receive notifications when away from home:
+
+**Option 1: Port Forward** (Simple but less secure)
+Forward port 8080 on your router to your server
+
+**Option 2: Reverse Proxy** (Recommended)
+Use Nginx or Caddy with SSL:
+```nginx
+# nginx example
+location /ntfy {
+    proxy_pass http://localhost:8080;
+}
+```
+
+**Option 3: Tailscale/Wireguard** (Most Secure)
+Access via VPN, no ports exposed
+
+### Privacy & Security
+
+- **Self-hosted**: All notifications stay on your server
+- **No accounts**: No signup required, just pick a topic
+- **Open source**: [github.com/binwiederhier/ntfy](https://github.com/binwiederhier/ntfy)
+- **Encryption**: Use HTTPS in production
+- **Access control**: Optional authentication available in ntfy
+
+### Optional: Telegram Integration
+
+If you prefer Telegram:
+
+1. Create a bot via [@BotFather](https://t.me/botfather)
+2. Get your chat ID via [@userinfobot](https://t.me/userinfobot)
+3. Add to `.env`:
+```bash
+TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_CHAT_ID=123456789
+```
+
+Simpleton will send to both ntfy and Telegram if both are configured.
+
+### Troubleshooting
+
+**Not receiving notifications?**
+
+1. Check ntfy is running:
+```bash
+docker ps | grep ntfy
+curl http://localhost:8080/health
+```
+
+2. Test ntfy directly:
+```bash
+curl -d "Test message" http://localhost:8080/simpleton-alerts-yourname123
+```
+
+3. Check Simpleton logs:
+```bash
+docker-compose logs simpleton | grep -i notification
+```
+
+4. Verify configuration:
+```bash
+curl http://localhost:8000/analytics/notifications/test \
+  -H "X-API-Key: your-api-key"
+```
+
+**Mobile app not connecting?**
+
+- Use your server's IP address, not `localhost`
+- Check firewall allows port 8080
+- Try web UI first: `http://YOUR-IP:8080`
+
 ## Configuration
 
 Edit `.env` to configure the service:
@@ -690,6 +913,7 @@ LOG_LEVEL=INFO
 - `GET /analytics/alerts` - Active alerts
 - `GET /analytics/cache` - Cache statistics
 - `DELETE /analytics/cache` - Clear cache
+- `POST /analytics/notifications/test` - Test notification system
 - `GET /metrics` - Prometheus metrics
 
 **Models:**
@@ -835,7 +1059,8 @@ simpleton/
 │       ├── text_chunker.py     # Text chunking strategies
 │       ├── qdrant_client.py    # Qdrant vector database client
 │       ├── cache.py            # Redis caching client
-│       └── monitoring.py       # Monitoring middleware & metrics
+│       ├── monitoring.py       # Monitoring middleware & metrics
+│       └── notifications.py    # Notification service (ntfy/Telegram)
 ├── .env                  # Environment variables
 ├── .env.example         # Example configuration
 ├── .python-version      # Python version for uv
