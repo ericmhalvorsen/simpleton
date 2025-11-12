@@ -461,6 +461,169 @@ print(f"Sources: {len(result['sources'])}")
    - Use separate collections for different document types
    - Add metadata for filtering (source, date, category, etc.)
 
+## Audio Transcription & Translation
+
+Simpleton includes audio processing capabilities using Whisper for transcription and translation.
+
+### Quick Start with Audio
+
+#### 1. Transcribe Audio (Base64)
+
+```bash
+# Transcribe with automatic language detection
+curl -X POST http://localhost:8000/audio/transcribe \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audio": "UklGRiQAAABXQVZFZm10...",
+    "model": "base"
+  }'
+```
+
+**Response:**
+```json
+{
+  "text": "This is the transcribed text from the audio.",
+  "language": "en",
+  "duration": 12.5,
+  "model": "base"
+}
+```
+
+#### 2. Translate Audio to English
+
+```bash
+# Translate from any language to English
+curl -X POST http://localhost:8000/audio/translate \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audio": "UklGRiQAAABXQVZFZm10...",
+    "model": "base"
+  }'
+```
+
+#### 3. Upload Audio File
+
+```bash
+# Transcribe uploaded file
+curl -X POST http://localhost:8000/audio/upload/transcribe \
+  -H "X-API-Key: your-api-key" \
+  -F "file=@meeting_recording.mp3" \
+  -F "model=base"
+
+# Translate uploaded file
+curl -X POST http://localhost:8000/audio/upload/translate \
+  -H "X-API-Key: your-api-key" \
+  -F "file=@podcast.wav" \
+  -F "model=small"
+```
+
+### Audio Configuration
+
+Add to your `.env` file:
+
+```bash
+# Default Whisper model (tiny, base, small, medium, large)
+DEFAULT_AUDIO_MODEL=base
+```
+
+### Whisper Model Sizes
+
+Choose based on your accuracy vs. speed needs:
+
+| Model | Size | Speed | Accuracy | Best For |
+|-------|------|-------|----------|----------|
+| tiny | 75MB | Fastest | Lowest | Quick drafts, real-time |
+| base | 142MB | Fast | Good | General use (default) |
+| small | 466MB | Medium | Better | Professional transcription |
+| medium | 1.5GB | Slow | High | High-quality needs |
+| large | 3GB | Slowest | Highest | Maximum accuracy |
+
+Models are downloaded automatically on first use and cached globally.
+
+### Supported Audio Formats
+
+- WAV, MP3, M4A, FLAC, OGG, OPUS, WEBM
+- Any format supported by ffmpeg
+
+### Audio Use Cases
+
+1. **Meeting Transcription**: Record and transcribe team meetings
+2. **Podcast Processing**: Generate transcripts for podcasts
+3. **Accessibility**: Create captions for video content
+4. **Voice Notes**: Transcribe voice memos and notes
+5. **Language Learning**: Transcribe and translate foreign language audio
+6. **Documentation**: Convert recorded instructions to text
+
+### Python Audio Example
+
+```python
+import httpx
+import base64
+
+API_KEY = "your-api-key"
+BASE_URL = "http://localhost:8000"
+
+async def transcribe_audio(audio_path: str):
+    """Transcribe audio file"""
+    # Read and encode audio
+    with open(audio_path, "rb") as f:
+        audio_data = base64.b64encode(f.read()).decode()
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{BASE_URL}/audio/transcribe",
+            headers={"X-API-Key": API_KEY},
+            json={
+                "audio": audio_data,
+                "model": "base"
+            }
+        )
+        return response.json()
+
+async def translate_audio(audio_path: str):
+    """Translate audio to English"""
+    with open(audio_path, "rb") as f:
+        audio_data = base64.b64encode(f.read()).decode()
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{BASE_URL}/audio/translate",
+            headers={"X-API-Key": API_KEY},
+            json={
+                "audio": audio_data,
+                "model": "base"
+            }
+        )
+        return response.json()
+
+# Usage
+result = await transcribe_audio("meeting.mp3")
+print(f"Transcription: {result['text']}")
+print(f"Language: {result['language']}")
+```
+
+### Audio Performance Tips
+
+1. **Model Selection**:
+   - Use `tiny` or `base` for real-time or near-real-time needs
+   - Use `small` or `medium` for production transcription
+   - Use `large` only when maximum accuracy is critical
+
+2. **Audio Quality**:
+   - Clear audio = better transcription accuracy
+   - 16kHz or higher sample rate recommended
+   - Reduce background noise when possible
+
+3. **Language Hints**:
+   - Specify language if known for faster processing
+   - Omit language for automatic detection (90+ languages)
+
+4. **File Size**:
+   - Longer audio = longer processing time
+   - Consider splitting very long files (>1 hour)
+
 ## Configuration
 
 Edit `.env` to configure the service:
@@ -508,6 +671,26 @@ LOG_LEVEL=INFO
 - `POST /rag/search` - Semantic search (without LLM)
 - `GET /rag/collections` - List all document collections
 - `DELETE /rag/collections/{name}` - Delete a collection
+
+**Vision (Multimodal):**
+- `POST /vision/analyze` - Analyze images with custom prompts
+- `POST /vision/caption` - Generate image captions
+- `POST /vision/ocr` - Extract text from images
+- `POST /vision/upload` - Upload and analyze image files
+
+**Audio (Multimodal):**
+- `POST /audio/transcribe` - Transcribe audio to text (90+ languages)
+- `POST /audio/translate` - Translate audio to English
+- `POST /audio/upload/transcribe` - Upload and transcribe audio files
+- `POST /audio/upload/translate` - Upload and translate audio files
+
+**Analytics & Monitoring:**
+- `GET /analytics/stats` - Service statistics
+- `GET /analytics/errors` - Recent errors
+- `GET /analytics/alerts` - Active alerts
+- `GET /analytics/cache` - Cache statistics
+- `DELETE /analytics/cache` - Clear cache
+- `GET /metrics` - Prometheus metrics
 
 **Models:**
 - `GET /models` - List available models
@@ -643,21 +826,28 @@ simpleton/
 │   ├── routers/
 │   │   ├── inference.py  # Inference endpoints
 │   │   ├── embeddings.py # Embedding endpoints
-│   │   └── rag.py        # RAG endpoints
+│   │   ├── rag.py        # RAG endpoints
+│   │   ├── vision.py     # Vision (multimodal) endpoints
+│   │   ├── audio.py      # Audio transcription/translation endpoints
+│   │   └── analytics.py  # Analytics & monitoring endpoints
 │   └── utils/
 │       ├── document_parser.py  # Document parsing (PDF, DOCX, etc.)
 │       ├── text_chunker.py     # Text chunking strategies
-│       └── qdrant_client.py    # Qdrant vector database client
+│       ├── qdrant_client.py    # Qdrant vector database client
+│       ├── cache.py            # Redis caching client
+│       └── monitoring.py       # Monitoring middleware & metrics
 ├── .env                  # Environment variables
 ├── .env.example         # Example configuration
 ├── .python-version      # Python version for uv
 ├── pyproject.toml       # Python dependencies and project metadata
 ├── mise.toml            # Task runner configuration
 ├── Dockerfile           # Service container (uses uv)
-├── docker-compose.yml   # Docker orchestration (Simpleton + Ollama + Qdrant)
+├── docker-compose.yml   # Docker orchestration (Simpleton + Ollama + Qdrant + Redis)
 ├── start.sh            # Startup script
 ├── example_client.py   # Example API client
-└── IDEAS.md            # Enhancement ideas and roadmap
+├── IDEAS.md            # Enhancement ideas and roadmap
+├── PHASE2_COMPLETE.md  # Phase 2 implementation summary
+└── README.md           # This file
 ```
 
 ### Running Tests
