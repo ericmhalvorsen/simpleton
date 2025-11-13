@@ -1,0 +1,16 @@
+# Ignore files
+.DS_Store
+node_modules
+/build
+/.svelte-kit
+/package
+.env
+.env.*
+!.env.example
+
+# Ignore lock files
+package-lock.json
+bun.lock
+
+# Ignore generated files
+*.log

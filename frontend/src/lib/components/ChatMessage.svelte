@@ -7,7 +7,12 @@
 	$: isSystem = message.role === 'system';
 </script>
 
-<div class="message" class:user={isUser} class:assistant={!isUser && !isSystem} class:system={isSystem}>
+<div
+	class="message"
+	class:user={isUser}
+	class:assistant={!isUser && !isSystem}
+	class:system={isSystem}
+>
 	<div class="message-role">
 		{#if isUser}
 			<div class="avatar user-avatar">You</div>

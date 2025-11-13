@@ -111,10 +111,7 @@ export const chats = createChatsStore();
 export const currentChatId = writable<string | null>(null);
 
 // Derived store for the current chat
-export const currentChat = derived(
-	[chats, currentChatId],
-	([$chats, $currentChatId]) => {
-		if (!$currentChatId) return null;
-		return $chats.find((chat) => chat.id === $currentChatId) || null;
-	}
-);
+export const currentChat = derived([chats, currentChatId], ([$chats, $currentChatId]) => {
+	if (!$currentChatId) return null;
+	return $chats.find((chat) => chat.id === $currentChatId) || null;
+});
