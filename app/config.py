@@ -54,6 +54,16 @@ class Settings(BaseSettings):
     alert_error_rate_threshold: float = 0.1  # 10% error rate
     alert_response_time_threshold: float = 5.0  # 5 seconds
 
+    # Notification Configuration
+    notifications_enabled: bool = True
+    ntfy_url: str = "http://localhost:8080"  # Use http://ntfy:80 inside Docker
+    ntfy_topic: str = ""  # Your topic name (e.g., simpleton-alerts)
+    notify_on_startup: bool = True
+    notify_on_alerts: bool = True
+    notify_on_requests: bool = False  # Set to True to get notified on every API call
+    telegram_bot_token: str = ""  # Optional: Telegram bot token
+    telegram_chat_id: str = ""  # Optional: Telegram chat ID
+
     @property
     def valid_api_keys(self) -> List[str]:
         """Parse API keys from comma-separated string"""

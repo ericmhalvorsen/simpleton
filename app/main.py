@@ -21,6 +21,7 @@ from app.utils.monitoring import (
     MonitoringMiddleware,
     export_prometheus_metrics
 )
+from app.utils.notifications import get_notification_service
 
 # Configure logging
 logging.basicConfig(
@@ -60,6 +61,47 @@ app.include_router(rag.router)
 app.include_router(analytics.router)
 app.include_router(vision.router)
 app.include_router(audio.router)
+
+
+# Startup/Shutdown Events
+@app.on_event("startup")
+async def startup_event():
+    """Send notification when service starts"""
+    if settings.notifications_enabled and settings.notify_on_startup:
+        try:
+            notification_service = get_notification_service(
+                ntfy_url=settings.ntfy_url,
+                ntfy_topic=settings.ntfy_topic,
+                telegram_bot_token=settings.telegram_bot_token,
+                telegram_chat_id=settings.telegram_chat_id,
+                enabled=settings.notifications_enabled,
+            )
+            await notification_service.send_startup(
+                service_name="Simpleton",
+                host=settings.host,
+                port=settings.port,
+            )
+            logger.info("Startup notification sent")
+        except Exception as e:
+            logger.error(f"Failed to send startup notification: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Send notification when service shuts down"""
+    if settings.notifications_enabled:
+        try:
+            notification_service = get_notification_service(
+                ntfy_url=settings.ntfy_url,
+                ntfy_topic=settings.ntfy_topic,
+                telegram_bot_token=settings.telegram_bot_token,
+                telegram_chat_id=settings.telegram_chat_id,
+                enabled=settings.notifications_enabled,
+            )
+            await notification_service.send_shutdown(service_name="Simpleton")
+            logger.info("Shutdown notification sent")
+        except Exception as e:
+            logger.error(f"Failed to send shutdown notification: {e}")
 
 
 @app.get("/", response_model=dict)
