@@ -1,7 +1,6 @@
 // API Client for Simpleton Backend
 
 import type {
-	ChatMessage,
 	ChatRequest,
 	ChatResponse,
 	GenerateRequest,
@@ -86,6 +85,7 @@ class APIClient {
 		}
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	async generate(request: GenerateRequest): Promise<any> {
 		const response = await fetch(`${this.baseURL}/inference/generate`, {
 			method: 'POST',
@@ -126,6 +126,7 @@ class APIClient {
 		return response.json();
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	async healthCheck(): Promise<any> {
 		const response = await fetch(`${this.baseURL}/health`);
 		return response.json();

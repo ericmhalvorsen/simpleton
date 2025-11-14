@@ -2,7 +2,6 @@
 
 import { writable, derived } from 'svelte/store';
 import type { Chat, ChatMessage } from '../api/types';
-import { v4 as uuidv4 } from 'uuid';
 
 // Generate a simple UUID alternative without external dependency
 function generateId(): string {

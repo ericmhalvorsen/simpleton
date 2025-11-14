@@ -1,7 +1,6 @@
 """Configuration management for Simpleton LLM Service"""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List
 
 
 class Settings(BaseSettings):
@@ -65,7 +64,7 @@ class Settings(BaseSettings):
     telegram_chat_id: str = ""  # Optional: Telegram chat ID
 
     @property
-    def valid_api_keys(self) -> List[str]:
+    def valid_api_keys(self) -> list[str]:
         """Parse API keys from comma-separated string"""
         return [key.strip() for key in self.api_keys.split(",") if key.strip()]
 

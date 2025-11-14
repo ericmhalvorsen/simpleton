@@ -1,18 +1,19 @@
 """Qdrant vector database client for RAG operations"""
 
+import logging
 import uuid
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from qdrant_client import QdrantClient
+from qdrant_client.http import models
 from qdrant_client.models import (
     Distance,
-    VectorParams,
-    PointStruct,
-    Filter,
     FieldCondition,
+    Filter,
     MatchValue,
+    PointStruct,
+    VectorParams,
 )
-from qdrant_client.http import models
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 class QdrantVectorStore:
     """Wrapper for Qdrant vector database operations"""
 
-    def __init__(self, url: str, api_key: Optional[str] = None):
+    def __init__(self, url: str, api_key: str | None = None):
         """
         Initialize Qdrant client
 
@@ -28,11 +29,7 @@ class QdrantVectorStore:
             url: Qdrant server URL
             api_key: Optional API key for authentication
         """
-        self.client = QdrantClient(
-            url=url,
-            api_key=api_key if api_key else None,
-            timeout=60
-        )
+        self.client = QdrantClient(url=url, api_key=api_key if api_key else None, timeout=60)
         logger.info(f"Initialized Qdrant client connected to {url}")
 
     def create_collection(
@@ -40,7 +37,7 @@ class QdrantVectorStore:
         collection_name: str,
         vector_size: int,
         distance: Distance = Distance.COSINE,
-        force_recreate: bool = False
+        force_recreate: bool = False,
     ) -> bool:
         """
         Create a new collection in Qdrant
@@ -70,10 +67,7 @@ class QdrantVectorStore:
             # Create collection
             self.client.create_collection(
                 collection_name=collection_name,
-                vectors_config=VectorParams(
-                    size=vector_size,
-                    distance=distance
-                )
+                vectors_config=VectorParams(size=vector_size, distance=distance),
             )
             logger.info(f"Created collection: {collection_name} with vector size {vector_size}")
             return True
@@ -99,7 +93,7 @@ class QdrantVectorStore:
             logger.error(f"Error checking collection existence: {e}")
             return False
 
-    def get_collection_info(self, collection_name: str) -> Optional[Dict[str, Any]]:
+    def get_collection_info(self, collection_name: str) -> dict[str, Any] | None:
         """
         Get information about a collection
 
@@ -121,7 +115,7 @@ class QdrantVectorStore:
             logger.error(f"Error getting collection info: {e}")
             return None
 
-    def list_collections(self) -> List[Dict[str, Any]]:
+    def list_collections(self) -> list[dict[str, Any]]:
         """
         List all collections
 
@@ -163,11 +157,11 @@ class QdrantVectorStore:
     def add_documents(
         self,
         collection_name: str,
-        documents: List[str],
-        embeddings: List[List[float]],
-        metadata: Optional[List[Dict[str, Any]]] = None,
-        ids: Optional[List[str]] = None
-    ) -> List[str]:
+        documents: list[str],
+        embeddings: list[list[float]],
+        metadata: list[dict[str, Any]] | None = None,
+        ids: list[str] | None = None,
+    ) -> list[str]:
         """
         Add documents with embeddings to collection
 
@@ -196,27 +190,17 @@ class QdrantVectorStore:
 
         # Create points
         points = []
-        for i, (doc_id, doc, embedding, meta) in enumerate(zip(ids, documents, embeddings, metadata)):
+        for i, (doc_id, doc, embedding, meta) in enumerate(
+            zip(ids, documents, embeddings, metadata)
+        ):
             # Add document text to metadata
-            payload = {
-                "text": doc,
-                **meta
-            }
+            payload = {"text": doc, **meta}
 
-            points.append(
-                PointStruct(
-                    id=doc_id,
-                    vector=embedding,
-                    payload=payload
-                )
-            )
+            points.append(PointStruct(id=doc_id, vector=embedding, payload=payload))
 
         # Upload points to Qdrant
         try:
-            self.client.upsert(
-                collection_name=collection_name,
-                points=points
-            )
+            self.client.upsert(collection_name=collection_name, points=points)
             logger.info(f"Added {len(points)} documents to collection {collection_name}")
             return ids
         except Exception as e:
@@ -226,11 +210,11 @@ class QdrantVectorStore:
     def search(
         self,
         collection_name: str,
-        query_vector: List[float],
+        query_vector: list[float],
         top_k: int = 5,
-        score_threshold: Optional[float] = None,
-        metadata_filter: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+        score_threshold: float | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Search for similar documents
 
@@ -250,12 +234,7 @@ class QdrantVectorStore:
             if metadata_filter:
                 conditions = []
                 for key, value in metadata_filter.items():
-                    conditions.append(
-                        FieldCondition(
-                            key=key,
-                            match=MatchValue(value=value)
-                        )
-                    )
+                    conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
                 if conditions:
                     query_filter = Filter(must=conditions)
 
@@ -266,18 +245,20 @@ class QdrantVectorStore:
                 limit=top_k,
                 query_filter=query_filter,
                 score_threshold=score_threshold,
-                with_payload=True
+                with_payload=True,
             )
 
             # Format results
             formatted_results = []
             for result in results:
-                formatted_results.append({
-                    "id": str(result.id),
-                    "score": result.score,
-                    "text": result.payload.get("text", ""),
-                    "metadata": {k: v for k, v in result.payload.items() if k != "text"}
-                })
+                formatted_results.append(
+                    {
+                        "id": str(result.id),
+                        "score": result.score,
+                        "text": result.payload.get("text", ""),
+                        "metadata": {k: v for k, v in result.payload.items() if k != "text"},
+                    }
+                )
 
             logger.info(f"Search returned {len(formatted_results)} results from {collection_name}")
             return formatted_results
@@ -286,7 +267,7 @@ class QdrantVectorStore:
             logger.error(f"Search failed: {e}")
             raise
 
-    def get_document(self, collection_name: str, document_id: str) -> Optional[Dict[str, Any]]:
+    def get_document(self, collection_name: str, document_id: str) -> dict[str, Any] | None:
         """
         Retrieve a specific document by ID
 
@@ -302,7 +283,7 @@ class QdrantVectorStore:
                 collection_name=collection_name,
                 ids=[document_id],
                 with_payload=True,
-                with_vectors=False
+                with_vectors=False,
             )
 
             if result:
@@ -310,7 +291,7 @@ class QdrantVectorStore:
                 return {
                     "id": str(point.id),
                     "text": point.payload.get("text", ""),
-                    "metadata": {k: v for k, v in point.payload.items() if k != "text"}
+                    "metadata": {k: v for k, v in point.payload.items() if k != "text"},
                 }
 
             return None
@@ -319,7 +300,7 @@ class QdrantVectorStore:
             logger.error(f"Failed to retrieve document: {e}")
             return None
 
-    def delete_documents(self, collection_name: str, document_ids: List[str]) -> bool:
+    def delete_documents(self, collection_name: str, document_ids: list[str]) -> bool:
         """
         Delete documents by IDs
 
@@ -333,9 +314,7 @@ class QdrantVectorStore:
         try:
             self.client.delete(
                 collection_name=collection_name,
-                points_selector=models.PointIdsList(
-                    points=document_ids
-                )
+                points_selector=models.PointIdsList(points=document_ids),
             )
             logger.info(f"Deleted {len(document_ids)} documents from {collection_name}")
             return True

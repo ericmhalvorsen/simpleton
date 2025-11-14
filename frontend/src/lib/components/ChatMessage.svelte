@@ -23,6 +23,7 @@
 		{/if}
 	</div>
 	<div class="message-content">
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 		{@html message.content.replace(/\n/g, '<br>')}
 	</div>
 </div>

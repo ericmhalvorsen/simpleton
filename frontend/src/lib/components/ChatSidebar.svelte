@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { chats, currentChatId } from '../stores/chats';
-	import type { Chat } from '../api/types';
 
 	export let onNewChat: () => void;
 

@@ -29,17 +29,20 @@ Modern chat interface for Simpleton LLM service built with **SvelteKit** and **B
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 bun install
 ```
 
 2. Configure environment:
+
 ```bash
 cp .env.example .env
 # Edit .env and set your API key
 ```
 
 3. Start development server:
+
 ```bash
 bun run dev
 ```
@@ -130,11 +133,11 @@ The Vite dev server is configured for optimal HMR in `vite.config.ts`:
 
 ```ts
 export default defineConfig({
-  server: {
-    hmr: {
-      overlay: true  // Show errors in browser overlay
-    }
-  }
+	server: {
+		hmr: {
+			overlay: true // Show errors in browser overlay
+		}
+	}
 });
 ```
 
@@ -159,15 +162,13 @@ import { apiClient } from '$lib/api/client';
 
 // Send chat message
 const response = await apiClient.chat({
-  messages: [
-    { role: 'user', content: 'Hello!' }
-  ],
-  model: 'qwen2.5:7b'
+	messages: [{ role: 'user', content: 'Hello!' }],
+	model: 'qwen2.5:7b'
 });
 
 // Stream chat response
 for await (const chunk of apiClient.chatStream(request)) {
-  console.log(chunk);
+	console.log(chunk);
 }
 
 // Get available models
@@ -181,11 +182,13 @@ const models = await apiClient.getModels();
 If you see "Backend is offline" warning:
 
 1. Ensure Simpleton backend is running:
+
    ```bash
    cd .. && docker-compose up -d
    ```
 
 2. Verify backend is accessible:
+
    ```bash
    curl http://localhost:8000/health
    ```
@@ -213,6 +216,7 @@ If hot reload isn't working:
 ### TypeScript
 
 The project uses TypeScript for type safety. Type definitions are in:
+
 - `src/lib/api/types.ts` - API types
 - `src/app.d.ts` - Global types
 
@@ -222,18 +226,18 @@ Svelte components use scoped CSS by default:
 
 ```svelte
 <script lang="ts">
-  // Component logic
+	// Component logic
 </script>
 
 <div class="component">
-  <!-- HTML -->
+	<!-- HTML -->
 </div>
 
 <style>
-  /* Scoped styles */
-  .component {
-    color: blue;
-  }
+	/* Scoped styles */
+	.component {
+		color: blue;
+	}
 </style>
 ```
 
@@ -248,8 +252,8 @@ export const myStore = writable(initialValue);
 
 // In component:
 import { myStore } from './stores';
-$myStore // Access value
-myStore.set(newValue) // Update
+$myStore; // Access value
+myStore.set(newValue); // Update
 ```
 
 ## Contributing

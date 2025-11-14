@@ -63,6 +63,7 @@ export interface RAGQueryResponse {
 		chunk_id: string;
 		content: string;
 		score: number;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		metadata?: Record<string, any>;
 	}>;
 	model: string;

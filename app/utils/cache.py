@@ -1,9 +1,10 @@
 """Redis caching utility for responses"""
 
-import json
 import hashlib
+import json
 import logging
-from typing import Optional, Any
+from typing import Any
+
 from redis import Redis
 from redis.exceptions import RedisError
 
@@ -52,7 +53,7 @@ class CacheClient:
         data_hash = hashlib.sha256(data_str.encode()).hexdigest()[:16]
         return f"{prefix}:{data_hash}"
 
-    def get(self, prefix: str, data: dict) -> Optional[Any]:
+    def get(self, prefix: str, data: dict) -> Any | None:
         """
         Get cached value
 
@@ -185,10 +186,7 @@ class CacheClient:
             Dictionary with cache stats
         """
         if not self.enabled or not self._client:
-            return {
-                "enabled": False,
-                "status": "disabled"
-            }
+            return {"enabled": False, "status": "disabled"}
 
         try:
             info = self._client.info("stats")
@@ -201,8 +199,7 @@ class CacheClient:
                 "hits": info.get("keyspace_hits", 0),
                 "misses": info.get("keyspace_misses", 0),
                 "hit_rate": self._calculate_hit_rate(
-                    info.get("keyspace_hits", 0),
-                    info.get("keyspace_misses", 0)
+                    info.get("keyspace_hits", 0), info.get("keyspace_misses", 0)
                 ),
                 "memory_used_mb": round(memory_info.get("used_memory", 0) / 1024 / 1024, 2),
                 "memory_peak_mb": round(memory_info.get("used_memory_peak", 0) / 1024 / 1024, 2),
@@ -210,11 +207,7 @@ class CacheClient:
 
         except RedisError as e:
             logger.error(f"Failed to get cache stats: {e}")
-            return {
-                "enabled": True,
-                "status": "error",
-                "error": str(e)
-            }
+            return {"enabled": True, "status": "error", "error": str(e)}
 
     def _calculate_hit_rate(self, hits: int, misses: int) -> float:
         """Calculate cache hit rate"""
@@ -231,7 +224,7 @@ class CacheClient:
 
 
 # Global cache instance (initialized when needed)
-_cache_client: Optional[CacheClient] = None
+_cache_client: CacheClient | None = None
 
 
 def get_cache_client(redis_url: str, enabled: bool = True) -> CacheClient:

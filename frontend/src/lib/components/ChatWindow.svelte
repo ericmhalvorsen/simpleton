@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, afterUpdate } from 'svelte';
+	import { afterUpdate } from 'svelte';
 	import { currentChat, chats } from '../stores/chats';
 	import { apiClient } from '../api/client';
 	import ChatMessage from './ChatMessage.svelte';
