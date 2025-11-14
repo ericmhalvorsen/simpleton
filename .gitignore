@@ -51,7 +51,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -74,3 +74,10 @@ wheels/
 # Logs
 *.log
 logs/
+
+# Frontend (SvelteKit)
+frontend/.svelte-kit/
+frontend/build/
+frontend/node_modules/
+frontend/.env
+frontend/package-lock.json

@@ -1,9 +1,9 @@
 """Embeddings endpoints for vector generation"""
 
-import httpx
 import logging
+
+import httpx
 from fastapi import APIRouter, HTTPException, status
-from typing import List
 
 from app.auth import RequireAPIKey
 from app.config import settings
@@ -81,12 +81,7 @@ async def create_embeddings(
                     total_duration += data["total_duration"]
 
                 # Cache the embedding
-                cache.set(
-                    "embedding",
-                    cache_key_data,
-                    embedding,
-                    ttl=settings.cache_embedding_ttl
-                )
+                cache.set("embedding", cache_key_data, embedding, ttl=settings.cache_embedding_ttl)
 
         return EmbeddingResponse(
             model=model,
@@ -118,7 +113,7 @@ async def create_embeddings(
 
 @router.post("/batch", response_model=EmbeddingResponse)
 async def create_batch_embeddings(
-    texts: List[str],
+    texts: list[str],
     model: str | None = None,
     api_key: RequireAPIKey = None,
 ):

@@ -1,12 +1,11 @@
 """Analytics and monitoring endpoints"""
 
-from fastapi import APIRouter, HTTPException, status, Response
-from typing import Optional
+from fastapi import APIRouter, HTTPException, status
 
 from app.auth import RequireAPIKey
 from app.config import settings
-from app.utils.monitoring import get_metrics_store, export_prometheus_metrics
 from app.utils.cache import get_cache_client
+from app.utils.monitoring import get_metrics_store
 from app.utils.notifications import get_notification_service
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -14,7 +13,7 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 @router.get("/stats")
 async def get_stats(
-    since_minutes: Optional[int] = None,
+    since_minutes: int | None = None,
     api_key: RequireAPIKey = None,
 ):
     """
@@ -30,13 +29,13 @@ async def get_stats(
         return {
             "status": "success",
             "metrics": stats,
-            "period": f"last {since_minutes} minutes" if since_minutes else "all time"
+            "period": f"last {since_minutes} minutes" if since_minutes else "all time",
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve stats: {str(e)}"
+            detail=f"Failed to retrieve stats: {str(e)}",
         )
 
 
@@ -54,16 +53,12 @@ async def get_recent_errors(
         metrics_store = get_metrics_store(settings.metrics_retention_hours)
         errors = metrics_store.get_recent_errors(limit=limit)
 
-        return {
-            "status": "success",
-            "errors": errors,
-            "count": len(errors)
-        }
+        return {"status": "success", "errors": errors, "count": len(errors)}
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve errors: {str(e)}"
+            detail=f"Failed to retrieve errors: {str(e)}",
         )
 
 
@@ -82,7 +77,7 @@ async def check_alerts(
         metrics_store = get_metrics_store(settings.metrics_retention_hours)
         alerts = metrics_store.check_alerts(
             error_threshold=settings.alert_error_rate_threshold,
-            response_time_threshold=settings.alert_response_time_threshold
+            response_time_threshold=settings.alert_response_time_threshold,
         )
 
         # Send notifications for alerts if enabled
@@ -105,6 +100,7 @@ async def check_alerts(
             except Exception as e:
                 # Don't fail the request if notifications fail
                 import logging
+
                 logging.getLogger(__name__).error(f"Failed to send alert notification: {e}")
 
         return {
@@ -113,14 +109,14 @@ async def check_alerts(
             "alert_count": len(alerts),
             "thresholds": {
                 "error_rate": settings.alert_error_rate_threshold,
-                "response_time": settings.alert_response_time_threshold
-            }
+                "response_time": settings.alert_response_time_threshold,
+            },
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to check alerts: {str(e)}"
+            detail=f"Failed to check alerts: {str(e)}",
         )
 
 
@@ -137,21 +133,18 @@ async def get_cache_stats(
         cache_client = get_cache_client(settings.redis_url, settings.cache_enabled)
         stats = cache_client.get_stats()
 
-        return {
-            "status": "success",
-            "cache": stats
-        }
+        return {"status": "success", "cache": stats}
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve cache stats: {str(e)}"
+            detail=f"Failed to retrieve cache stats: {str(e)}",
         )
 
 
 @router.delete("/cache")
 async def clear_cache(
-    prefix: Optional[str] = None,
+    prefix: str | None = None,
     api_key: RequireAPIKey = None,
 ):
     """
@@ -170,19 +163,19 @@ async def clear_cache(
             return {
                 "status": "success",
                 "message": f"Cleared cache entries with prefix: {prefix}",
-                "deleted": deleted
+                "deleted": deleted,
             }
         else:
             success = cache_client.clear_all()
             return {
                 "status": "success" if success else "error",
-                "message": "Cleared all cache entries" if success else "Failed to clear cache"
+                "message": "Cleared all cache entries" if success else "Failed to clear cache",
             }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to clear cache: {str(e)}"
+            detail=f"Failed to clear cache: {str(e)}",
         )
 
 
@@ -198,10 +191,7 @@ async def test_notification(
     """
     try:
         if not settings.notifications_enabled:
-            return {
-                "status": "disabled",
-                "message": "Notifications are disabled in configuration"
-            }
+            return {"status": "disabled", "message": "Notifications are disabled in configuration"}
 
         notification_service = get_notification_service(
             ntfy_url=settings.ntfy_url,
@@ -236,7 +226,7 @@ async def test_notification(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send test notification: {str(e)}"
+            detail=f"Failed to send test notification: {str(e)}",
         )
 
 
@@ -247,10 +237,7 @@ async def analytics_health():
 
     Verifies that monitoring and caching systems are operational.
     """
-    health_status = {
-        "status": "healthy",
-        "components": {}
-    }
+    health_status = {"status": "healthy", "components": {}}
 
     # Check monitoring
     try:
@@ -258,13 +245,10 @@ async def analytics_health():
         stats = metrics_store.get_stats(since_minutes=1)
         health_status["components"]["monitoring"] = {
             "status": "healthy" if settings.monitoring_enabled else "disabled",
-            "recent_requests": stats["total_requests"]
+            "recent_requests": stats["total_requests"],
         }
     except Exception as e:
-        health_status["components"]["monitoring"] = {
-            "status": "unhealthy",
-            "error": str(e)
-        }
+        health_status["components"]["monitoring"] = {"status": "unhealthy", "error": str(e)}
         health_status["status"] = "degraded"
 
     # Check cache
@@ -273,13 +257,10 @@ async def analytics_health():
         cache_stats = cache_client.get_stats()
         health_status["components"]["cache"] = {
             "status": cache_stats.get("status", "unknown"),
-            "enabled": cache_stats.get("enabled", False)
+            "enabled": cache_stats.get("enabled", False),
         }
     except Exception as e:
-        health_status["components"]["cache"] = {
-            "status": "unhealthy",
-            "error": str(e)
-        }
+        health_status["components"]["cache"] = {"status": "unhealthy", "error": str(e)}
         health_status["status"] = "degraded"
 
     return health_status

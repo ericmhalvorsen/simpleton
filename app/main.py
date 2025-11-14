@@ -5,22 +5,19 @@ A lightweight API service for hosting open-source LLMs with custom authenticatio
 Powered by Ollama for model inference and embeddings.
 """
 
+import logging
+
 import httpx
-from fastapi import FastAPI, HTTPException, status, Response
+from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import logging
 
 from app import __version__
 from app.auth import RequireAPIKey
 from app.config import settings
-from app.models import HealthResponse, ModelsResponse, ModelInfo
-from app.routers import inference, embeddings, rag, analytics, vision, audio
-from app.utils.monitoring import (
-    get_metrics_store,
-    MonitoringMiddleware,
-    export_prometheus_metrics
-)
+from app.models import HealthResponse, ModelInfo, ModelsResponse
+from app.routers import analytics, audio, embeddings, inference, rag, vision
+from app.utils.monitoring import MonitoringMiddleware, export_prometheus_metrics, get_metrics_store
 from app.utils.notifications import get_notification_service
 
 # Configure logging

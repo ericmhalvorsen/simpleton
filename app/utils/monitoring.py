@@ -1,63 +1,41 @@
 """Request monitoring and metrics collection"""
 
-import time
 import logging
-from typing import Callable, Optional
+import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from datetime import datetime, timedelta
+
 from fastapi import Request, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from starlette.middleware.base import BaseHTTPMiddleware
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 logger = logging.getLogger(__name__)
 
 
 # Prometheus metrics
 REQUEST_COUNT = Counter(
-    'simpleton_requests_total',
-    'Total HTTP requests',
-    ['method', 'endpoint', 'status']
+    "simpleton_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
 )
 
 REQUEST_DURATION = Histogram(
-    'simpleton_request_duration_seconds',
-    'HTTP request duration in seconds',
-    ['method', 'endpoint']
+    "simpleton_request_duration_seconds", "HTTP request duration in seconds", ["method", "endpoint"]
 )
 
-REQUEST_IN_PROGRESS = Gauge(
-    'simpleton_requests_in_progress',
-    'Number of HTTP requests in progress'
-)
+REQUEST_IN_PROGRESS = Gauge("simpleton_requests_in_progress", "Number of HTTP requests in progress")
 
-ERROR_COUNT = Counter(
-    'simpleton_errors_total',
-    'Total errors',
-    ['endpoint', 'error_type']
-)
+ERROR_COUNT = Counter("simpleton_errors_total", "Total errors", ["endpoint", "error_type"])
 
-CACHE_HITS = Counter(
-    'simpleton_cache_hits_total',
-    'Total cache hits',
-    ['cache_type']
-)
+CACHE_HITS = Counter("simpleton_cache_hits_total", "Total cache hits", ["cache_type"])
 
-CACHE_MISSES = Counter(
-    'simpleton_cache_misses_total',
-    'Total cache misses',
-    ['cache_type']
-)
+CACHE_MISSES = Counter("simpleton_cache_misses_total", "Total cache misses", ["cache_type"])
 
-LLM_REQUESTS = Counter(
-    'simpleton_llm_requests_total',
-    'Total LLM requests',
-    ['model', 'endpoint']
-)
+LLM_REQUESTS = Counter("simpleton_llm_requests_total", "Total LLM requests", ["model", "endpoint"])
 
 LLM_TOKENS = Counter(
-    'simpleton_llm_tokens_total',
-    'Total LLM tokens processed',
-    ['model', 'token_type']  # prompt or completion
+    "simpleton_llm_tokens_total",
+    "Total LLM tokens processed",
+    ["model", "token_type"],  # prompt or completion
 )
 
 
@@ -76,16 +54,18 @@ class MetricsStore:
 
         # Request metrics (rolling window)
         self.requests = deque(maxlen=10000)  # Last 10k requests
-        self.errors = deque(maxlen=1000)     # Last 1k errors
+        self.errors = deque(maxlen=1000)  # Last 1k errors
 
         # Aggregated stats
-        self.endpoint_stats = defaultdict(lambda: {
-            "count": 0,
-            "total_time": 0.0,
-            "min_time": float('inf'),
-            "max_time": 0.0,
-            "errors": 0
-        })
+        self.endpoint_stats = defaultdict(
+            lambda: {
+                "count": 0,
+                "total_time": 0.0,
+                "min_time": float("inf"),
+                "max_time": 0.0,
+                "errors": 0,
+            }
+        )
 
         # Current period counters
         self.current_minute_requests = 0
@@ -94,25 +74,22 @@ class MetricsStore:
         logger.info(f"Initialized metrics store with {retention_hours}h retention")
 
     def record_request(
-        self,
-        method: str,
-        path: str,
-        status_code: int,
-        duration: float,
-        error: Optional[str] = None
+        self, method: str, path: str, status_code: int, duration: float, error: str | None = None
     ):
         """Record a request"""
         now = datetime.now()
 
         # Add to rolling window
-        self.requests.append({
-            "timestamp": now,
-            "method": method,
-            "path": path,
-            "status": status_code,
-            "duration": duration,
-            "error": error
-        })
+        self.requests.append(
+            {
+                "timestamp": now,
+                "method": method,
+                "path": path,
+                "status": status_code,
+                "duration": duration,
+                "error": error,
+            }
+        )
 
         # Update endpoint stats
         endpoint_key = f"{method} {path}"
@@ -124,13 +101,15 @@ class MetricsStore:
 
         if status_code >= 400 or error:
             stats["errors"] += 1
-            self.errors.append({
-                "timestamp": now,
-                "method": method,
-                "path": path,
-                "status": status_code,
-                "error": error
-            })
+            self.errors.append(
+                {
+                    "timestamp": now,
+                    "method": method,
+                    "path": path,
+                    "status": status_code,
+                    "error": error,
+                }
+            )
 
         # Update current minute counter
         if (now - self.current_minute_start).total_seconds() >= 60:
@@ -154,7 +133,7 @@ class MetricsStore:
         while self.errors and self.errors[0]["timestamp"] < cutoff:
             self.errors.popleft()
 
-    def get_stats(self, since_minutes: Optional[int] = None) -> dict:
+    def get_stats(self, since_minutes: int | None = None) -> dict:
         """
         Get aggregated statistics
 
@@ -200,7 +179,7 @@ class MetricsStore:
                     "min_time": round(stats["min_time"], 3),
                     "max_time": round(stats["max_time"], 3),
                     "errors": stats["errors"],
-                    "error_rate": round((stats["errors"] / stats["count"]) * 100, 2)
+                    "error_rate": round((stats["errors"] / stats["count"]) * 100, 2),
                 }
 
         return {
@@ -211,7 +190,7 @@ class MetricsStore:
             "requests_per_minute": self.current_minute_requests,
             "status_distribution": dict(status_dist),
             "endpoint_breakdown": endpoint_breakdown,
-            "retention_hours": self.retention_hours
+            "retention_hours": self.retention_hours,
         }
 
     def get_recent_errors(self, limit: int = 10) -> list:
@@ -223,7 +202,7 @@ class MetricsStore:
                 "method": e["method"],
                 "path": e["path"],
                 "status": e["status"],
-                "error": e.get("error", "Unknown")
+                "error": e.get("error", "Unknown"),
             }
             for e in reversed(errors_list)  # Most recent first
         ]
@@ -246,23 +225,27 @@ class MetricsStore:
         if stats["total_requests"] > 10:  # Only alert if we have enough data
             error_rate = stats["error_rate"] / 100
             if error_rate > error_threshold:
-                alerts.append({
-                    "type": "high_error_rate",
-                    "severity": "warning",
-                    "message": f"Error rate is {stats['error_rate']:.1f}% (threshold: {error_threshold*100:.1f}%)",
-                    "value": stats["error_rate"],
-                    "threshold": error_threshold * 100
-                })
+                alerts.append(
+                    {
+                        "type": "high_error_rate",
+                        "severity": "warning",
+                        "message": f"Error rate is {stats['error_rate']:.1f}% (threshold: {error_threshold * 100:.1f}%)",
+                        "value": stats["error_rate"],
+                        "threshold": error_threshold * 100,
+                    }
+                )
 
         # Check response time
         if stats["avg_response_time"] > response_time_threshold:
-            alerts.append({
-                "type": "high_response_time",
-                "severity": "warning",
-                "message": f"Average response time is {stats['avg_response_time']:.2f}s (threshold: {response_time_threshold}s)",
-                "value": stats["avg_response_time"],
-                "threshold": response_time_threshold
-            })
+            alerts.append(
+                {
+                    "type": "high_response_time",
+                    "severity": "warning",
+                    "message": f"Average response time is {stats['avg_response_time']:.2f}s (threshold: {response_time_threshold}s)",
+                    "value": stats["avg_response_time"],
+                    "threshold": response_time_threshold,
+                }
+            )
 
         return alerts
 
@@ -303,22 +286,18 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
 
             # Update Prometheus metrics
             REQUEST_COUNT.labels(
-                method=request.method,
-                endpoint=request.url.path,
-                status=status_code
+                method=request.method, endpoint=request.url.path, status=status_code
             ).inc()
 
-            REQUEST_DURATION.labels(
-                method=request.method,
-                endpoint=request.url.path
-            ).observe(duration)
+            REQUEST_DURATION.labels(method=request.method, endpoint=request.url.path).observe(
+                duration
+            )
 
             REQUEST_IN_PROGRESS.dec()
 
             if error or status_code >= 400:
                 ERROR_COUNT.labels(
-                    endpoint=request.url.path,
-                    error_type="http_error" if not error else "exception"
+                    endpoint=request.url.path, error_type="http_error" if not error else "exception"
                 ).inc()
 
             # Record in metrics store
@@ -327,12 +306,12 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 status_code=status_code,
                 duration=duration,
-                error=error
+                error=error,
             )
 
 
 # Global metrics store
-_metrics_store: Optional[MetricsStore] = None
+_metrics_store: MetricsStore | None = None
 
 
 def get_metrics_store(retention_hours: int = 168) -> MetricsStore:

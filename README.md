@@ -1036,6 +1036,55 @@ docker-compose up -d
 
 ## Development
 
+### Code Quality & CI/CD
+
+This project uses automated linting and continuous integration to maintain code quality.
+
+#### Backend Linting (Python)
+
+We use [Ruff](https://github.com/astral-sh/ruff) for fast Python linting and formatting:
+
+```bash
+# Run linting
+uv run ruff check app/
+
+# Auto-fix issues
+uv run ruff check --fix app/
+
+# Format code
+uv run ruff format app/
+
+# Check formatting without changes
+uv run ruff format --check app/
+```
+
+#### Frontend Linting (TypeScript/Svelte)
+
+We use ESLint and Prettier for frontend code quality:
+
+```bash
+cd frontend
+
+# Run all linters
+bun run lint
+
+# Format code
+bun run format
+
+# Type checking
+bun run check
+```
+
+#### GitHub Actions CI
+
+All pull requests automatically run:
+- ✅ Backend: Ruff linting and formatting checks
+- ✅ Frontend: ESLint, Prettier, and TypeScript checks
+- ✅ Frontend: Production build test
+- ✅ Docker: Build verification
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+
 ### Project Structure
 ```
 simpleton/
@@ -1101,7 +1150,12 @@ See LICENSE file for details.
 
 ## Contributing
 
-Contributions welcome! Please open an issue or PR.
+Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup instructions
+- Code quality guidelines
+- Testing requirements
+- Pull request process
+- CI/CD information
 
 ## Acknowledgments
 

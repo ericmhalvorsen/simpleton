@@ -1,7 +1,8 @@
 """Pydantic models for request/response validation"""
 
+from typing import Any
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 
 
 # Inference Models
@@ -9,14 +10,14 @@ class InferenceRequest(BaseModel):
     """Request model for text inference/generation"""
 
     prompt: str = Field(..., description="The input prompt for the model")
-    model: Optional[str] = Field(None, description="Model to use (defaults to configured model)")
+    model: str | None = Field(None, description="Model to use (defaults to configured model)")
     stream: bool = Field(False, description="Stream the response")
-    temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
-    max_tokens: Optional[int] = Field(None, gt=0, description="Maximum tokens to generate")
-    top_p: Optional[float] = Field(None, ge=0.0, le=1.0, description="Nucleus sampling parameter")
-    top_k: Optional[int] = Field(None, gt=0, description="Top-k sampling parameter")
-    system: Optional[str] = Field(None, description="System prompt")
-    context: Optional[List[int]] = Field(None, description="Context from previous conversation")
+    temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
+    max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
+    top_p: float | None = Field(None, ge=0.0, le=1.0, description="Nucleus sampling parameter")
+    top_k: int | None = Field(None, gt=0, description="Top-k sampling parameter")
+    system: str | None = Field(None, description="System prompt")
+    context: list[int] | None = Field(None, description="Context from previous conversation")
 
     class Config:
         json_schema_extra = {
@@ -35,20 +36,22 @@ class InferenceResponse(BaseModel):
     model: str = Field(..., description="Model used for generation")
     response: str = Field(..., description="Generated text response")
     done: bool = Field(..., description="Whether generation is complete")
-    context: Optional[List[int]] = Field(None, description="Context for continuing conversation")
-    total_duration: Optional[int] = Field(None, description="Total duration in nanoseconds")
-    load_duration: Optional[int] = Field(None, description="Model load duration in nanoseconds")
-    prompt_eval_count: Optional[int] = Field(None, description="Number of tokens in prompt")
-    eval_count: Optional[int] = Field(None, description="Number of tokens generated")
-    eval_duration: Optional[int] = Field(None, description="Generation duration in nanoseconds")
+    context: list[int] | None = Field(None, description="Context for continuing conversation")
+    total_duration: int | None = Field(None, description="Total duration in nanoseconds")
+    load_duration: int | None = Field(None, description="Model load duration in nanoseconds")
+    prompt_eval_count: int | None = Field(None, description="Number of tokens in prompt")
+    eval_count: int | None = Field(None, description="Number of tokens generated")
+    eval_duration: int | None = Field(None, description="Generation duration in nanoseconds")
 
 
 # Embedding Models
 class EmbeddingRequest(BaseModel):
     """Request model for generating embeddings"""
 
-    input: str | List[str] = Field(..., description="Text or list of texts to embed")
-    model: Optional[str] = Field(None, description="Embedding model to use (defaults to configured model)")
+    input: str | list[str] = Field(..., description="Text or list of texts to embed")
+    model: str | None = Field(
+        None, description="Embedding model to use (defaults to configured model)"
+    )
 
     class Config:
         json_schema_extra = {
@@ -62,7 +65,7 @@ class EmbeddingRequest(BaseModel):
 class EmbeddingData(BaseModel):
     """Individual embedding result"""
 
-    embedding: List[float] = Field(..., description="The embedding vector")
+    embedding: list[float] = Field(..., description="The embedding vector")
     index: int = Field(..., description="Index of the text in the input list")
 
 
@@ -70,8 +73,8 @@ class EmbeddingResponse(BaseModel):
     """Response model for embeddings"""
 
     model: str = Field(..., description="Model used for embeddings")
-    embeddings: List[List[float]] = Field(..., description="List of embedding vectors")
-    total_duration: Optional[int] = Field(None, description="Total duration in nanoseconds")
+    embeddings: list[list[float]] = Field(..., description="List of embedding vectors")
+    total_duration: int | None = Field(None, description="Total duration in nanoseconds")
 
 
 # Chat Models (for more structured conversations)
@@ -85,11 +88,11 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     """Request model for chat-based inference"""
 
-    messages: List[ChatMessage] = Field(..., description="List of conversation messages")
-    model: Optional[str] = Field(None, description="Model to use (defaults to configured model)")
+    messages: list[ChatMessage] = Field(..., description="List of conversation messages")
+    model: str | None = Field(None, description="Model to use (defaults to configured model)")
     stream: bool = Field(False, description="Stream the response")
-    temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
-    max_tokens: Optional[int] = Field(None, gt=0, description="Maximum tokens to generate")
+    temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
+    max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
 
     class Config:
         json_schema_extra = {
@@ -110,9 +113,9 @@ class ChatResponse(BaseModel):
     model: str = Field(..., description="Model used for generation")
     message: ChatMessage = Field(..., description="Generated message")
     done: bool = Field(..., description="Whether generation is complete")
-    total_duration: Optional[int] = Field(None, description="Total duration in nanoseconds")
-    prompt_eval_count: Optional[int] = Field(None, description="Number of tokens in prompt")
-    eval_count: Optional[int] = Field(None, description="Number of tokens generated")
+    total_duration: int | None = Field(None, description="Total duration in nanoseconds")
+    prompt_eval_count: int | None = Field(None, description="Number of tokens in prompt")
+    eval_count: int | None = Field(None, description="Number of tokens generated")
 
 
 # Health Check
@@ -129,15 +132,15 @@ class ModelInfo(BaseModel):
     """Information about available models"""
 
     name: str = Field(..., description="Model name")
-    size: Optional[int] = Field(None, description="Model size in bytes")
-    modified_at: Optional[str] = Field(None, description="Last modification time")
-    digest: Optional[str] = Field(None, description="Model digest/hash")
+    size: int | None = Field(None, description="Model size in bytes")
+    modified_at: str | None = Field(None, description="Last modification time")
+    digest: str | None = Field(None, description="Model digest/hash")
 
 
 class ModelsResponse(BaseModel):
     """Response containing list of available models"""
 
-    models: List[ModelInfo] = Field(..., description="List of available models")
+    models: list[ModelInfo] = Field(..., description="List of available models")
 
 
 # RAG Models
@@ -145,17 +148,23 @@ class DocumentIngestRequest(BaseModel):
     """Request model for ingesting documents into RAG system"""
 
     content: str = Field(..., description="Document content to ingest")
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Document metadata")
-    collection: Optional[str] = Field(None, description="Collection name (defaults to configured collection)")
-    chunk_size: Optional[int] = Field(None, description="Chunk size for splitting (defaults to configured size)")
-    chunk_overlap: Optional[int] = Field(None, description="Overlap between chunks (defaults to configured overlap)")
+    metadata: dict[str, Any] | None = Field(default_factory=dict, description="Document metadata")
+    collection: str | None = Field(
+        None, description="Collection name (defaults to configured collection)"
+    )
+    chunk_size: int | None = Field(
+        None, description="Chunk size for splitting (defaults to configured size)"
+    )
+    chunk_overlap: int | None = Field(
+        None, description="Overlap between chunks (defaults to configured overlap)"
+    )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "content": "This is a sample document about AI...",
                 "metadata": {"source": "article.pdf", "author": "John Doe", "date": "2025-01-15"},
-                "collection": "documents"
+                "collection": "documents",
             }
         }
 
@@ -165,7 +174,7 @@ class DocumentChunk(BaseModel):
 
     chunk_id: str = Field(..., description="Unique chunk identifier")
     content: str = Field(..., description="Chunk content")
-    metadata: Dict[str, Any] = Field(..., description="Chunk metadata")
+    metadata: dict[str, Any] = Field(..., description="Chunk metadata")
 
 
 class DocumentIngestResponse(BaseModel):
@@ -173,7 +182,7 @@ class DocumentIngestResponse(BaseModel):
 
     collection: str = Field(..., description="Collection name")
     chunks_created: int = Field(..., description="Number of chunks created")
-    chunk_ids: List[str] = Field(..., description="List of created chunk IDs")
+    chunk_ids: list[str] = Field(..., description="List of created chunk IDs")
     embedding_model: str = Field(..., description="Model used for embeddings")
 
 
@@ -181,12 +190,18 @@ class RAGQueryRequest(BaseModel):
     """Request model for RAG-powered query"""
 
     query: str = Field(..., description="Query text")
-    collection: Optional[str] = Field(None, description="Collection to search (defaults to configured collection)")
-    top_k: Optional[int] = Field(None, description="Number of results to retrieve (defaults to configured top_k)")
-    model: Optional[str] = Field(None, description="Model for generation (defaults to configured model)")
-    system_prompt: Optional[str] = Field(None, description="System prompt for generation")
-    temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
-    max_tokens: Optional[int] = Field(None, gt=0, description="Maximum tokens to generate")
+    collection: str | None = Field(
+        None, description="Collection to search (defaults to configured collection)"
+    )
+    top_k: int | None = Field(
+        None, description="Number of results to retrieve (defaults to configured top_k)"
+    )
+    model: str | None = Field(
+        None, description="Model for generation (defaults to configured model)"
+    )
+    system_prompt: str | None = Field(None, description="System prompt for generation")
+    temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
+    max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
 
     class Config:
         json_schema_extra = {
@@ -194,7 +209,7 @@ class RAGQueryRequest(BaseModel):
                 "query": "What are the benefits of quantum computing?",
                 "collection": "documents",
                 "top_k": 3,
-                "model": "qwen2.5:7b"
+                "model": "qwen2.5:7b",
             }
         }
 
@@ -205,7 +220,7 @@ class SearchResult(BaseModel):
     chunk_id: str = Field(..., description="Chunk identifier")
     content: str = Field(..., description="Chunk content")
     score: float = Field(..., description="Relevance score")
-    metadata: Dict[str, Any] = Field(..., description="Chunk metadata")
+    metadata: dict[str, Any] = Field(..., description="Chunk metadata")
 
 
 class RAGQueryResponse(BaseModel):
@@ -213,7 +228,7 @@ class RAGQueryResponse(BaseModel):
 
     query: str = Field(..., description="Original query")
     answer: str = Field(..., description="Generated answer")
-    sources: List[SearchResult] = Field(..., description="Source documents used")
+    sources: list[SearchResult] = Field(..., description="Source documents used")
     model: str = Field(..., description="Model used for generation")
     collection: str = Field(..., description="Collection searched")
 
@@ -222,9 +237,15 @@ class SemanticSearchRequest(BaseModel):
     """Request model for semantic search"""
 
     query: str = Field(..., description="Search query")
-    collection: Optional[str] = Field(None, description="Collection to search (defaults to configured collection)")
-    top_k: Optional[int] = Field(None, description="Number of results to return (defaults to configured top_k)")
-    score_threshold: Optional[float] = Field(None, ge=0.0, le=1.0, description="Minimum similarity score")
+    collection: str | None = Field(
+        None, description="Collection to search (defaults to configured collection)"
+    )
+    top_k: int | None = Field(
+        None, description="Number of results to return (defaults to configured top_k)"
+    )
+    score_threshold: float | None = Field(
+        None, ge=0.0, le=1.0, description="Minimum similarity score"
+    )
 
     class Config:
         json_schema_extra = {
@@ -232,7 +253,7 @@ class SemanticSearchRequest(BaseModel):
                 "query": "machine learning algorithms",
                 "collection": "documents",
                 "top_k": 5,
-                "score_threshold": 0.7
+                "score_threshold": 0.7,
             }
         }
 
@@ -241,7 +262,7 @@ class SemanticSearchResponse(BaseModel):
     """Response model for semantic search"""
 
     query: str = Field(..., description="Search query")
-    results: List[SearchResult] = Field(..., description="Search results")
+    results: list[SearchResult] = Field(..., description="Search results")
     collection: str = Field(..., description="Collection searched")
     total_results: int = Field(..., description="Total number of results")
 
@@ -257,7 +278,7 @@ class CollectionInfo(BaseModel):
 class CollectionsResponse(BaseModel):
     """Response containing list of collections"""
 
-    collections: List[CollectionInfo] = Field(..., description="List of collections")
+    collections: list[CollectionInfo] = Field(..., description="List of collections")
 
 
 class CollectionDeleteResponse(BaseModel):
@@ -273,9 +294,9 @@ class VisionAnalyzeRequest(BaseModel):
 
     image: str = Field(..., description="Base64 encoded image or image URL")
     prompt: str = Field(..., description="Question or instruction about the image")
-    model: Optional[str] = Field(None, description="Vision model to use (defaults to llava)")
-    temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
-    max_tokens: Optional[int] = Field(None, gt=0, description="Maximum tokens to generate")
+    model: str | None = Field(None, description="Vision model to use (defaults to llava)")
+    temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
+    max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
 
     class Config:
         json_schema_extra = {
@@ -283,7 +304,7 @@ class VisionAnalyzeRequest(BaseModel):
                 "image": "data:image/png;base64,iVBORw0KG...",
                 "prompt": "What objects are in this image?",
                 "model": "llava",
-                "temperature": 0.7
+                "temperature": 0.7,
             }
         }
 
@@ -294,23 +315,25 @@ class VisionAnalyzeResponse(BaseModel):
     model: str = Field(..., description="Model used for analysis")
     response: str = Field(..., description="Generated description/answer")
     done: bool = Field(..., description="Whether generation is complete")
-    total_duration: Optional[int] = Field(None, description="Total duration in nanoseconds")
-    eval_count: Optional[int] = Field(None, description="Number of tokens generated")
+    total_duration: int | None = Field(None, description="Total duration in nanoseconds")
+    eval_count: int | None = Field(None, description="Number of tokens generated")
 
 
 class VisionCaptionRequest(BaseModel):
     """Request model for image captioning"""
 
     image: str = Field(..., description="Base64 encoded image or image URL")
-    model: Optional[str] = Field(None, description="Vision model to use (defaults to llava)")
-    detail_level: Optional[str] = Field("normal", description="Caption detail level: brief, normal, or detailed")
+    model: str | None = Field(None, description="Vision model to use (defaults to llava)")
+    detail_level: str | None = Field(
+        "normal", description="Caption detail level: brief, normal, or detailed"
+    )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "image": "data:image/png;base64,iVBORw0KG...",
                 "model": "llava",
-                "detail_level": "normal"
+                "detail_level": "normal",
             }
         }
 
@@ -326,14 +349,11 @@ class VisionOCRRequest(BaseModel):
     """Request model for OCR (text extraction from images)"""
 
     image: str = Field(..., description="Base64 encoded image or image URL")
-    model: Optional[str] = Field(None, description="Vision model to use (defaults to llava)")
+    model: str | None = Field(None, description="Vision model to use (defaults to llava)")
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "image": "data:image/png;base64,iVBORw0KG...",
-                "model": "llava"
-            }
+            "example": {"image": "data:image/png;base64,iVBORw0KG...", "model": "llava"}
         }
 
 
@@ -349,9 +369,15 @@ class AudioTranscribeRequest(BaseModel):
     """Request model for audio transcription"""
 
     audio: str = Field(..., description="Base64 encoded audio file")
-    language: Optional[str] = Field(None, description="Language code (e.g., 'en', 'es', 'fr'). Auto-detect if not specified")
-    model: Optional[str] = Field(None, description="Whisper model size (tiny, base, small, medium, large)")
-    task: Optional[str] = Field("transcribe", description="Task type: 'transcribe' or 'translate' (to English)")
+    language: str | None = Field(
+        None, description="Language code (e.g., 'en', 'es', 'fr'). Auto-detect if not specified"
+    )
+    model: str | None = Field(
+        None, description="Whisper model size (tiny, base, small, medium, large)"
+    )
+    task: str | None = Field(
+        "transcribe", description="Task type: 'transcribe' or 'translate' (to English)"
+    )
 
     class Config:
         json_schema_extra = {
@@ -359,7 +385,7 @@ class AudioTranscribeRequest(BaseModel):
                 "audio": "data:audio/wav;base64,UklGRi...",
                 "language": "en",
                 "model": "base",
-                "task": "transcribe"
+                "task": "transcribe",
             }
         }
 
@@ -368,8 +394,8 @@ class AudioTranscribeResponse(BaseModel):
     """Response model for audio transcription"""
 
     text: str = Field(..., description="Transcribed text")
-    language: Optional[str] = Field(None, description="Detected or specified language")
-    duration: Optional[float] = Field(None, description="Audio duration in seconds")
+    language: str | None = Field(None, description="Detected or specified language")
+    duration: float | None = Field(None, description="Audio duration in seconds")
     model: str = Field(..., description="Model used for transcription")
 
 
@@ -377,14 +403,13 @@ class AudioTranslateRequest(BaseModel):
     """Request model for audio translation to English"""
 
     audio: str = Field(..., description="Base64 encoded audio file")
-    model: Optional[str] = Field(None, description="Whisper model size (tiny, base, small, medium, large)")
+    model: str | None = Field(
+        None, description="Whisper model size (tiny, base, small, medium, large)"
+    )
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "audio": "data:audio/wav;base64,UklGRi...",
-                "model": "base"
-            }
+            "example": {"audio": "data:audio/wav;base64,UklGRi...", "model": "base"}
         }
 
 
@@ -392,6 +417,6 @@ class AudioTranslateResponse(BaseModel):
     """Response model for audio translation"""
 
     text: str = Field(..., description="Translated text (in English)")
-    source_language: Optional[str] = Field(None, description="Detected source language")
-    duration: Optional[float] = Field(None, description="Audio duration in seconds")
+    source_language: str | None = Field(None, description="Detected source language")
+    duration: float | None = Field(None, description="Audio duration in seconds")
     model: str = Field(..., description="Model used for translation")

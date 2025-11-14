@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Optional
+
 import markdown
 
 
@@ -24,14 +24,14 @@ class DocumentParser:
         html = markdown.markdown(content)
 
         # Remove HTML tags
-        text = re.sub(r'<[^>]+>', '', html)
+        text = re.sub(r"<[^>]+>", "", html)
 
         # Decode common HTML entities
-        text = text.replace('&amp;', '&')
-        text = text.replace('&lt;', '<')
-        text = text.replace('&gt;', '>')
-        text = text.replace('&quot;', '"')
-        text = text.replace('&#39;', "'")
+        text = text.replace("&amp;", "&")
+        text = text.replace("&lt;", "<")
+        text = text.replace("&gt;", ">")
+        text = text.replace("&quot;", '"')
+        text = text.replace("&#39;", "'")
 
         return text.strip()
 
@@ -75,7 +75,9 @@ class DocumentParser:
         try:
             from docx import Document
         except ImportError:
-            raise ImportError("python-docx is required for DOCX parsing. Install with: pip install python-docx")
+            raise ImportError(
+                "python-docx is required for DOCX parsing. Install with: pip install python-docx"
+            )
 
         doc = Document(file_path)
         text_parts = []
@@ -111,18 +113,18 @@ class DocumentParser:
         extension = path.suffix.lower()
 
         format_map = {
-            '.pdf': 'pdf',
-            '.docx': 'docx',
-            '.doc': 'docx',
-            '.md': 'markdown',
-            '.markdown': 'markdown',
-            '.txt': 'text',
+            ".pdf": "pdf",
+            ".docx": "docx",
+            ".doc": "docx",
+            ".md": "markdown",
+            ".markdown": "markdown",
+            ".txt": "text",
         }
 
-        return format_map.get(extension, 'text')
+        return format_map.get(extension, "text")
 
     @classmethod
-    def parse_file(cls, file_path: str, format: Optional[str] = None) -> str:
+    def parse_file(cls, file_path: str, format: str | None = None) -> str:
         """
         Parse a document file automatically detecting format
 
@@ -136,15 +138,15 @@ class DocumentParser:
         if format is None:
             format = cls.detect_format(file_path)
 
-        if format == 'pdf':
+        if format == "pdf":
             return cls.parse_pdf(file_path)
-        elif format == 'docx':
+        elif format == "docx":
             return cls.parse_docx(file_path)
-        elif format == 'markdown':
-            with open(file_path, 'r', encoding='utf-8') as f:
+        elif format == "markdown":
+            with open(file_path, encoding="utf-8") as f:
                 return cls.parse_markdown(f.read())
         else:  # text or unknown
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 return cls.parse_text(f.read())
 
     @staticmethod
@@ -159,10 +161,10 @@ class DocumentParser:
             Cleaned text
         """
         # Remove excessive whitespace
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
 
         # Remove excessive newlines (keep paragraph breaks)
-        text = re.sub(r'\n{3,}', '\n\n', text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
 
         # Trim
         text = text.strip()

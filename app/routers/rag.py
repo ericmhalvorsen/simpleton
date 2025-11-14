@@ -1,27 +1,27 @@
 """RAG (Retrieval-Augmented Generation) endpoints"""
 
-import httpx
-import uuid
 import logging
-from fastapi import APIRouter, HTTPException, status, Depends
-from typing import List
+import uuid
+
+import httpx
+from fastapi import APIRouter, HTTPException, status
 
 from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import (
+    CollectionDeleteResponse,
+    CollectionInfo,
+    CollectionsResponse,
     DocumentIngestRequest,
     DocumentIngestResponse,
     RAGQueryRequest,
     RAGQueryResponse,
+    SearchResult,
     SemanticSearchRequest,
     SemanticSearchResponse,
-    SearchResult,
-    CollectionsResponse,
-    CollectionInfo,
-    CollectionDeleteResponse,
 )
-from app.utils.text_chunker import TextChunker
 from app.utils.qdrant_client import QdrantVectorStore
+from app.utils.text_chunker import TextChunker
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +37,12 @@ def get_qdrant_client() -> QdrantVectorStore:
     if _qdrant_client is None:
         _qdrant_client = QdrantVectorStore(
             url=settings.qdrant_url,
-            api_key=settings.qdrant_api_key if settings.qdrant_api_key else None
+            api_key=settings.qdrant_api_key if settings.qdrant_api_key else None,
         )
     return _qdrant_client
 
 
-async def generate_embeddings(texts: List[str], model: str) -> List[List[float]]:
+async def generate_embeddings(texts: list[str], model: str) -> list[list[float]]:
     """
     Generate embeddings using Ollama
 
@@ -74,7 +74,7 @@ async def generate_embeddings(texts: List[str], model: str) -> List[List[float]]
                 logger.error(f"Failed to generate embedding: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to generate embeddings: {str(e)}"
+                    detail=f"Failed to generate embeddings: {str(e)}",
                 )
 
     return embeddings
@@ -112,23 +112,19 @@ async def ingest_document(
             test_embeddings = await generate_embeddings(["test"], embedding_model)
             vector_size = len(test_embeddings[0])
 
-            qdrant.create_collection(
-                collection_name=collection,
-                vector_size=vector_size
-            )
+            qdrant.create_collection(collection_name=collection, vector_size=vector_size)
 
         # Chunk the document
         chunks_with_metadata = TextChunker.chunk_with_metadata(
             text=request.content,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
-            strategy="recursive"
+            strategy="recursive",
         )
 
         if not chunks_with_metadata:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No chunks generated from document"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="No chunks generated from document"
             )
 
         # Extract chunk texts
@@ -161,14 +157,14 @@ async def ingest_document(
             documents=chunk_texts,
             embeddings=embeddings,
             metadata=chunk_metadata,
-            ids=chunk_ids
+            ids=chunk_ids,
         )
 
         return DocumentIngestResponse(
             collection=collection,
             chunks_created=len(chunk_texts),
             chunk_ids=chunk_ids,
-            embedding_model=embedding_model
+            embedding_model=embedding_model,
         )
 
     except HTTPException:
@@ -177,7 +173,7 @@ async def ingest_document(
         logger.error(f"Document ingestion failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to ingest document: {str(e)}"
+            detail=f"Failed to ingest document: {str(e)}",
         )
 
 
@@ -207,12 +203,11 @@ async def semantic_search(
         # Check collection exists
         if not qdrant.collection_exists(collection):
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Collection '{collection}' not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection '{collection}' not found"
             )
 
         # Generate query embedding
-        logger.info(f"Generating embedding for query")
+        logger.info("Generating embedding for query")
         query_embeddings = await generate_embeddings([request.query], embedding_model)
         query_vector = query_embeddings[0]
 
@@ -222,7 +217,7 @@ async def semantic_search(
             collection_name=collection,
             query_vector=query_vector,
             top_k=top_k,
-            score_threshold=request.score_threshold
+            score_threshold=request.score_threshold,
         )
 
         # Format results
@@ -231,7 +226,7 @@ async def semantic_search(
                 chunk_id=result["id"],
                 content=result["text"],
                 score=result["score"],
-                metadata=result["metadata"]
+                metadata=result["metadata"],
             )
             for result in results
         ]
@@ -240,7 +235,7 @@ async def semantic_search(
             query=request.query,
             results=search_results,
             collection=collection,
-            total_results=len(search_results)
+            total_results=len(search_results),
         )
 
     except HTTPException:
@@ -248,8 +243,7 @@ async def semantic_search(
     except Exception as e:
         logger.error(f"Semantic search failed: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Search failed: {str(e)}"
         )
 
 
@@ -280,25 +274,19 @@ async def rag_query(
         # Check collection exists
         if not qdrant.collection_exists(collection):
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Collection '{collection}' not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection '{collection}' not found"
             )
 
         # Step 1: Search for relevant chunks
-        logger.info(f"Searching for relevant chunks")
+        logger.info("Searching for relevant chunks")
         query_embeddings = await generate_embeddings([request.query], embedding_model)
         query_vector = query_embeddings[0]
 
-        results = qdrant.search(
-            collection_name=collection,
-            query_vector=query_vector,
-            top_k=top_k
-        )
+        results = qdrant.search(collection_name=collection, query_vector=query_vector, top_k=top_k)
 
         if not results:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No relevant documents found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="No relevant documents found"
             )
 
         # Step 2: Build context from retrieved chunks
@@ -332,7 +320,7 @@ Answer based on the context above:"""
                 "stream": False,
                 "options": {
                     "temperature": request.temperature,
-                }
+                },
             }
 
             if request.max_tokens:
@@ -352,7 +340,7 @@ Answer based on the context above:"""
                 chunk_id=result["id"],
                 content=result["text"],
                 score=result["score"],
-                metadata=result["metadata"]
+                metadata=result["metadata"],
             )
             for result in results
         ]
@@ -362,7 +350,7 @@ Answer based on the context above:"""
             answer=answer,
             sources=search_results,
             model=model,
-            collection=collection
+            collection=collection,
         )
 
     except HTTPException:
@@ -370,8 +358,7 @@ Answer based on the context above:"""
     except Exception as e:
         logger.error(f"RAG query failed: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Query failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}"
         )
 
 
@@ -393,7 +380,7 @@ async def list_collections(
             CollectionInfo(
                 name=col["name"],
                 vectors_count=col["vectors_count"],
-                points_count=col["points_count"]
+                points_count=col["points_count"],
             )
             for col in collections
         ]
@@ -404,7 +391,7 @@ async def list_collections(
         logger.error(f"Failed to list collections: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list collections: {str(e)}"
+            detail=f"Failed to list collections: {str(e)}",
         )
 
 
@@ -425,16 +412,13 @@ async def delete_collection(
         if not qdrant.collection_exists(collection_name):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Collection '{collection_name}' not found"
+                detail=f"Collection '{collection_name}' not found",
             )
 
         # Delete collection
         success = qdrant.delete_collection(collection_name)
 
-        return CollectionDeleteResponse(
-            collection=collection_name,
-            success=success
-        )
+        return CollectionDeleteResponse(collection=collection_name, success=success)
 
     except HTTPException:
         raise
@@ -442,5 +426,5 @@ async def delete_collection(
         logger.error(f"Failed to delete collection: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete collection: {str(e)}"
+            detail=f"Failed to delete collection: {str(e)}",
         )
