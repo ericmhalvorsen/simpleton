@@ -1,18 +1,13 @@
 """Text chunking strategies for RAG pipeline"""
 
 import re
-from typing import List
 
 
 class TextChunker:
     """Split text into chunks for embedding and retrieval"""
 
     @staticmethod
-    def chunk_by_tokens(
-        text: str,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200
-    ) -> List[str]:
+    def chunk_by_tokens(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> list[str]:
         """
         Split text into chunks by approximate token count
         Uses simple whitespace splitting as token approximation
@@ -57,10 +52,8 @@ class TextChunker:
 
     @staticmethod
     def chunk_by_sentences(
-        text: str,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200
-    ) -> List[str]:
+        text: str, chunk_size: int = 1000, chunk_overlap: int = 200
+    ) -> list[str]:
         """
         Split text into chunks by sentences, respecting chunk size
 
@@ -73,7 +66,7 @@ class TextChunker:
             List of text chunks
         """
         # Split into sentences (simple regex-based)
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = re.split(r"(?<=[.!?])\s+", text)
 
         if not sentences:
             return []
@@ -117,10 +110,8 @@ class TextChunker:
 
     @staticmethod
     def chunk_by_paragraphs(
-        text: str,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200
-    ) -> List[str]:
+        text: str, chunk_size: int = 1000, chunk_overlap: int = 200
+    ) -> list[str]:
         """
         Split text into chunks by paragraphs, respecting chunk size
 
@@ -133,7 +124,7 @@ class TextChunker:
             List of text chunks
         """
         # Split by double newlines (paragraphs)
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
 
         if not paragraphs:
             return []
@@ -190,11 +181,7 @@ class TextChunker:
         return chunks
 
     @staticmethod
-    def chunk_recursive(
-        text: str,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200
-    ) -> List[str]:
+    def chunk_recursive(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> list[str]:
         """
         Recursively split text trying different separators
         This is the recommended default method
@@ -214,11 +201,11 @@ class TextChunker:
             return [text] if text.strip() else []
 
         # Try splitting by paragraphs first (best preservation of context)
-        if '\n\n' in text:
+        if "\n\n" in text:
             return TextChunker.chunk_by_paragraphs(text, chunk_size, chunk_overlap)
 
         # Try splitting by sentences
-        if '. ' in text or '! ' in text or '? ' in text:
+        if ". " in text or "! " in text or "? " in text:
             return TextChunker.chunk_by_sentences(text, chunk_size, chunk_overlap)
 
         # Fall back to word-based chunking
@@ -226,11 +213,8 @@ class TextChunker:
 
     @staticmethod
     def chunk_with_metadata(
-        text: str,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200,
-        strategy: str = "recursive"
-    ) -> List[dict]:
+        text: str, chunk_size: int = 1000, chunk_overlap: int = 200, strategy: str = "recursive"
+    ) -> list[dict]:
         """
         Chunk text and return chunks with metadata
 
@@ -259,19 +243,25 @@ class TextChunker:
 
         for idx, chunk in enumerate(chunks):
             # Find chunk position in original text (approximate)
-            chunk_start = text.find(chunk[:50], char_offset) if len(chunk) >= 50 else text.find(chunk, char_offset)
+            chunk_start = (
+                text.find(chunk[:50], char_offset)
+                if len(chunk) >= 50
+                else text.find(chunk, char_offset)
+            )
             if chunk_start == -1:
                 chunk_start = char_offset
 
             chunk_end = chunk_start + len(chunk)
 
-            chunks_with_metadata.append({
-                "content": chunk,
-                "index": idx,
-                "char_start": chunk_start,
-                "char_end": chunk_end,
-                "length": len(chunk)
-            })
+            chunks_with_metadata.append(
+                {
+                    "content": chunk,
+                    "index": idx,
+                    "char_start": chunk_start,
+                    "char_end": chunk_end,
+                    "length": len(chunk),
+                }
+            )
 
             char_offset = chunk_end
 

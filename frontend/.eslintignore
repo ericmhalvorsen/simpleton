@@ -1,0 +1,13 @@
+.DS_Store
+node_modules
+/build
+/.svelte-kit
+/package
+.env
+.env.*
+!.env.example
+*.log
+
+# Ignore config files that don't need linting
+*.cjs
+vite.config.ts.timestamp-*

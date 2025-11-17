@@ -1,19 +1,19 @@
 """Inference endpoints for text generation"""
 
-import httpx
 import logging
+from collections.abc import AsyncIterator
+
+import httpx
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
-import json
-from typing import AsyncIterator
 
 from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import (
-    InferenceRequest,
-    InferenceResponse,
     ChatRequest,
     ChatResponse,
+    InferenceRequest,
+    InferenceResponse,
 )
 from app.utils.cache import get_cache_client
 from app.utils.monitoring import CACHE_HITS, CACHE_MISSES
@@ -117,12 +117,7 @@ async def generate_text(
                 data = response.json()
 
                 # Cache the response
-                cache.set(
-                    "inference",
-                    cache_key_data,
-                    data,
-                    ttl=settings.cache_inference_ttl
-                )
+                cache.set("inference", cache_key_data, data, ttl=settings.cache_inference_ttl)
 
                 return InferenceResponse(**data)
 
@@ -219,12 +214,7 @@ async def chat_completion(
                 data = response.json()
 
                 # Cache the response
-                cache.set(
-                    "chat",
-                    cache_key_data,
-                    data,
-                    ttl=settings.cache_inference_ttl
-                )
+                cache.set("chat", cache_key_data, data, ttl=settings.cache_inference_ttl)
 
                 return ChatResponse(**data)
 

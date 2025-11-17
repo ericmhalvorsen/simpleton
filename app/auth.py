@@ -1,8 +1,9 @@
 """API Key Authentication for Simpleton LLM Service"""
 
+from typing import Annotated
+
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
-from typing import Annotated
 
 from app.config import settings
 

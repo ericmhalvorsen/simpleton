@@ -1,13 +1,12 @@
 """Vision endpoints for image analysis and understanding"""
 
-import httpx
-import logging
 import base64
-from fastapi import APIRouter, HTTPException, status, UploadFile, File
-from fastapi.responses import JSONResponse
-from typing import Optional
-from PIL import Image
+import logging
 from io import BytesIO
+
+import httpx
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from PIL import Image
 
 from app.auth import RequireAPIKey
 from app.config import settings
@@ -117,10 +116,7 @@ async def analyze_image(
             )
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except httpx.HTTPStatusError as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -165,7 +161,7 @@ async def caption_image(
     prompts = {
         "brief": "Provide a brief one-sentence caption for this image.",
         "normal": "Describe this image in detail.",
-        "detailed": "Provide a comprehensive and detailed description of this image, including all visible elements, colors, actions, and context."
+        "detailed": "Provide a comprehensive and detailed description of this image, including all visible elements, colors, actions, and context.",
     }
 
     prompt = prompts.get(request.detail_level, prompts["normal"])
@@ -197,10 +193,7 @@ async def caption_image(
             )
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except httpx.HTTPStatusError as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -270,10 +263,7 @@ async def extract_text(
             )
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except httpx.HTTPStatusError as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -296,7 +286,7 @@ async def extract_text(
 async def upload_image_for_analysis(
     file: UploadFile = File(...),
     prompt: str = "Describe this image",
-    model: Optional[str] = None,
+    model: str | None = None,
     api_key: RequireAPIKey = None,
 ):
     """
@@ -326,19 +316,14 @@ async def upload_image_for_analysis(
             image.verify()
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid image file: {str(e)}"
+                status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid image file: {str(e)}"
             )
 
         # Convert to base64
-        image_b64 = base64.b64encode(content).decode('utf-8')
+        image_b64 = base64.b64encode(content).decode("utf-8")
 
         # Create analyze request
-        analyze_request = VisionAnalyzeRequest(
-            image=image_b64,
-            prompt=prompt,
-            model=model
-        )
+        analyze_request = VisionAnalyzeRequest(image=image_b64, prompt=prompt, model=model)
 
         # Use the analyze endpoint
         return await analyze_image(analyze_request, api_key)
@@ -349,5 +334,5 @@ async def upload_image_for_analysis(
         logger.error(f"File upload error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process uploaded file: {str(e)}"
+            detail=f"Failed to process uploaded file: {str(e)}",
         )

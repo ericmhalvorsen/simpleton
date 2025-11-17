@@ -1,9 +1,10 @@
 """Notification service for alerts and system events"""
 
 import logging
-import httpx
-from typing import Optional, Literal
 from datetime import datetime
+from typing import Literal
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +14,10 @@ class NotificationService:
 
     def __init__(
         self,
-        ntfy_url: Optional[str] = None,
-        ntfy_topic: Optional[str] = None,
-        telegram_bot_token: Optional[str] = None,
-        telegram_chat_id: Optional[str] = None,
+        ntfy_url: str | None = None,
+        ntfy_topic: str | None = None,
+        telegram_bot_token: str | None = None,
+        telegram_chat_id: str | None = None,
         enabled: bool = True,
     ):
         """
@@ -53,7 +54,7 @@ class NotificationService:
         title: str,
         message: str,
         priority: Literal["min", "low", "default", "high", "urgent"] = "default",
-        tags: Optional[list[str]] = None,
+        tags: list[str] | None = None,
     ) -> bool:
         """
         Send notification via configured channels
@@ -142,7 +143,9 @@ class NotificationService:
             logger.error(f"Telegram notification failed: {e}")
             return False
 
-    async def send_startup(self, service_name: str = "Simpleton", host: str = "localhost", port: int = 8000):
+    async def send_startup(
+        self, service_name: str = "Simpleton", host: str = "localhost", port: int = 8000
+    ):
         """Send startup notification"""
         await self.send(
             title=f"🚀 {service_name} Started",
@@ -200,14 +203,14 @@ class NotificationService:
 
 
 # Global notification service instance
-_notification_service: Optional[NotificationService] = None
+_notification_service: NotificationService | None = None
 
 
 def get_notification_service(
-    ntfy_url: Optional[str] = None,
-    ntfy_topic: Optional[str] = None,
-    telegram_bot_token: Optional[str] = None,
-    telegram_chat_id: Optional[str] = None,
+    ntfy_url: str | None = None,
+    ntfy_topic: str | None = None,
+    telegram_bot_token: str | None = None,
+    telegram_chat_id: str | None = None,
     enabled: bool = True,
 ) -> NotificationService:
     """Get or create notification service instance"""

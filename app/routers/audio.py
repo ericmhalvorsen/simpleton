@@ -2,11 +2,10 @@
 
 import base64
 import logging
-import tempfile
 import os
-from pathlib import Path
-from typing import Optional
-from fastapi import APIRouter, HTTPException, status, UploadFile, File
+import tempfile
+
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from faster_whisper import WhisperModel
 
 from app.auth import RequireAPIKey
@@ -53,7 +52,7 @@ def get_whisper_model(model_size: str = "base") -> WhisperModel:
             logger.error(f"Failed to load Whisper model {model_size}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to load Whisper model: {str(e)}"
+                detail=f"Failed to load Whisper model: {str(e)}",
             )
 
     return _whisper_models[model_size]
@@ -153,8 +152,8 @@ async def transcribe_audio(
 
             return AudioTranscribeResponse(
                 text=transcript,
-                language=info.language if hasattr(info, 'language') else request.language,
-                duration=info.duration if hasattr(info, 'duration') else None,
+                language=info.language if hasattr(info, "language") else request.language,
+                duration=info.duration if hasattr(info, "duration") else None,
                 model=model_size,
             )
 
@@ -166,15 +165,12 @@ async def transcribe_audio(
                 logger.warning(f"Failed to delete temp file: {e}")
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error(f"Transcription error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transcription failed: {str(e)}"
+            detail=f"Transcription failed: {str(e)}",
         )
 
 
@@ -240,8 +236,8 @@ async def translate_audio(
 
             return AudioTranslateResponse(
                 text=translation,
-                source_language=info.language if hasattr(info, 'language') else None,
-                duration=info.duration if hasattr(info, 'duration') else None,
+                source_language=info.language if hasattr(info, "language") else None,
+                duration=info.duration if hasattr(info, "duration") else None,
                 model=model_size,
             )
 
@@ -253,23 +249,20 @@ async def translate_audio(
                 logger.warning(f"Failed to delete temp file: {e}")
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error(f"Translation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Translation failed: {str(e)}"
+            detail=f"Translation failed: {str(e)}",
         )
 
 
 @router.post("/upload/transcribe")
 async def upload_and_transcribe(
     file: UploadFile = File(...),
-    language: Optional[str] = None,
-    model: Optional[str] = None,
+    language: str | None = None,
+    model: str | None = None,
     api_key: RequireAPIKey = None,
 ):
     """
@@ -294,14 +287,11 @@ async def upload_and_transcribe(
         content = await file.read()
 
         # Convert to base64
-        audio_b64 = base64.b64encode(content).decode('utf-8')
+        audio_b64 = base64.b64encode(content).decode("utf-8")
 
         # Create transcribe request
         transcribe_request = AudioTranscribeRequest(
-            audio=audio_b64,
-            language=language,
-            model=model,
-            task="transcribe"
+            audio=audio_b64, language=language, model=model, task="transcribe"
         )
 
         # Use the transcribe endpoint
@@ -313,14 +303,14 @@ async def upload_and_transcribe(
         logger.error(f"File upload error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process uploaded file: {str(e)}"
+            detail=f"Failed to process uploaded file: {str(e)}",
         )
 
 
 @router.post("/upload/translate")
 async def upload_and_translate(
     file: UploadFile = File(...),
-    model: Optional[str] = None,
+    model: str | None = None,
     api_key: RequireAPIKey = None,
 ):
     """
@@ -344,13 +334,10 @@ async def upload_and_translate(
         content = await file.read()
 
         # Convert to base64
-        audio_b64 = base64.b64encode(content).decode('utf-8')
+        audio_b64 = base64.b64encode(content).decode("utf-8")
 
         # Create translate request
-        translate_request = AudioTranslateRequest(
-            audio=audio_b64,
-            model=model
-        )
+        translate_request = AudioTranslateRequest(audio=audio_b64, model=model)
 
         # Use the translate endpoint
         return await translate_audio(translate_request, api_key)
@@ -361,5 +348,5 @@ async def upload_and_translate(
         logger.error(f"File upload error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process uploaded file: {str(e)}"
+            detail=f"Failed to process uploaded file: {str(e)}",
         )
