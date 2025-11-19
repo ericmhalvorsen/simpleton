@@ -82,6 +82,21 @@ docker exec -it simpleton-ollama ollama pull mxbai-embed-large
 | qwen3-embedding | Multilingual (#1 on MTEB) |
 | mxbai-embed-large | High quality embeddings |
 
+### Code Completion Models (FIM - Fill-in-the-Middle)
+
+| Model | Size | Speed | Best For | VRAM Required |
+|-------|------|-------|----------|---------------|
+| qwen2.5-coder:1.5b | 1.5B | Very Fast | Simple completions | ~2 GB |
+| qwen2.5-coder:7b | 7B | Fast | Recommended for inline completion | ~8 GB |
+| deepseek-coder:6.7b | 6.7B | Fast | High quality FIM | ~8 GB |
+| codellama:13b-code | 13B | Medium | Complex completions | ~16 GB |
+| deepseek-coder:33b | 33B | Slow | Maximum quality (64GB VRAM) | ~40 GB |
+
+To install a code completion model:
+```bash
+docker exec -it simpleton-ollama ollama pull qwen2.5-coder:7b
+```
+
 ### Choosing a Model
 
 The model you can run depends on your available VRAM:
@@ -141,6 +156,20 @@ curl http://localhost:8000/models \
   -H "X-API-Key: your-api-key"
 ```
 
+#### Code Completion (FIM)
+```bash
+curl -X POST http://localhost:8000/completion/inline \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prefix": "def calculate_fibonacci(n: int) -> int:\n    if n <= 1:\n        return n\n    ",
+    "suffix": "\n    return result",
+    "language": "python",
+    "temperature": 0.2,
+    "max_tokens": 128
+  }'
+```
+
 ### Using Python
 
 ```python
@@ -168,6 +197,22 @@ async def create_embedding(text: str):
             f"{BASE_URL}/embeddings/",
             headers={"X-API-Key": API_KEY},
             json={"input": text}
+        )
+        return response.json()
+
+async def complete_code(prefix: str, suffix: str = "", language: str = "python"):
+    """Fast inline code completion using FIM"""
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{BASE_URL}/completion/inline",
+            headers={"X-API-Key": API_KEY},
+            json={
+                "prefix": prefix,
+                "suffix": suffix,
+                "language": language,
+                "temperature": 0.2,
+                "max_tokens": 128,
+            }
         )
         return response.json()
 ```

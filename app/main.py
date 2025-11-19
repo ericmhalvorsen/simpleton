@@ -16,7 +16,7 @@ from app import __version__
 from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import HealthResponse, ModelInfo, ModelsResponse
-from app.routers import analytics, audio, embeddings, inference, rag, vision
+from app.routers import analytics, audio, completion, embeddings, inference, rag, vision
 from app.utils.monitoring import MonitoringMiddleware, export_prometheus_metrics, get_metrics_store
 from app.utils.notifications import get_notification_service
 
@@ -54,6 +54,7 @@ if settings.monitoring_enabled:
 # Include routers
 app.include_router(inference.router)
 app.include_router(embeddings.router)
+app.include_router(completion.router)  # Code completion with FIM
 app.include_router(rag.router)
 app.include_router(analytics.router)
 app.include_router(vision.router)
