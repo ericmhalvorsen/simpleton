@@ -1,9 +1,4 @@
-"""
-Simpleton - Personal LLM Service
-
-A lightweight API service for hosting open-source LLMs with custom authentication.
-Powered by Ollama for model inference and embeddings.
-"""
+"""Simpleton - Personal LLM Service"""
 
 import logging
 
@@ -20,41 +15,36 @@ from app.routers import analytics, audio, completion, embeddings, inference, rag
 from app.utils.monitoring import MonitoringMiddleware, export_prometheus_metrics, get_metrics_store
 from app.utils.notifications import get_notification_service
 
-# Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app
 app = FastAPI(
     title="Simpleton LLM Service",
-    description="Personal LLM inference and embedding service with custom authentication",
+    description="Personal LLM inference and embedding service",
     version=__version__,
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Add monitoring middleware
 if settings.monitoring_enabled:
     metrics_store = get_metrics_store(settings.metrics_retention_hours)
     app.add_middleware(MonitoringMiddleware, metrics_store=metrics_store)
     logger.info("Monitoring middleware enabled")
 
-# Include routers
 app.include_router(inference.router)
 app.include_router(embeddings.router)
-app.include_router(completion.router)  # Code completion with FIM
+app.include_router(completion.router)
 app.include_router(rag.router)
 app.include_router(analytics.router)
 app.include_router(vision.router)
@@ -64,7 +54,6 @@ app.include_router(audio.router)
 # Startup/Shutdown Events
 @app.on_event("startup")
 async def startup_event():
-    """Send notification when service starts"""
     if settings.notifications_enabled and settings.notify_on_startup:
         try:
             notification_service = get_notification_service(
@@ -86,7 +75,6 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Send notification when service shuts down"""
     if settings.notifications_enabled:
         try:
             notification_service = get_notification_service(
@@ -104,7 +92,6 @@ async def shutdown_event():
 
 @app.get("/", response_model=dict)
 async def root():
-    """Root endpoint with service information"""
     return {
         "service": "Simpleton LLM Service",
         "version": __version__,
@@ -116,11 +103,6 @@ async def root():
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """
-    Health check endpoint.
-
-    Verifies that the service is running and can connect to Ollama.
-    """
     ollama_status = "disconnected"
 
     try:
@@ -141,24 +123,12 @@ async def health_check():
 
 @app.get("/metrics")
 async def metrics():
-    """
-    Prometheus metrics endpoint.
-
-    Returns metrics in Prometheus exposition format for scraping.
-    Use this endpoint with Prometheus or compatible monitoring tools.
-    """
     metrics_data, content_type = export_prometheus_metrics()
     return Response(content=metrics_data, media_type=content_type)
 
 
 @app.get("/models", response_model=ModelsResponse)
 async def list_models(api_key: RequireAPIKey):
-    """
-    List all available models in Ollama.
-
-    Requires authentication. Returns information about all models
-    currently available in your Ollama instance.
-    """
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"{settings.ollama_base_url}/api/tags")
@@ -196,7 +166,6 @@ async def list_models(api_key: RequireAPIKey):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    """Global exception handler for unhandled errors"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
