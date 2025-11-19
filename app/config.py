@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     default_embedding_model: str = "nomic-embed-text"
     default_vision_model: str = "llava"
     default_audio_model: str = "base"  # Whisper model size: tiny, base, small, medium, large
+    default_completion_model: str = "qwen2.5-coder:7b"  # FIM-capable code completion model
 
     # Server Configuration
     host: str = "0.0.0.0"
@@ -46,6 +47,13 @@ class Settings(BaseSettings):
     cache_ttl: int = 3600  # Default TTL in seconds (1 hour)
     cache_embedding_ttl: int = 86400  # 24 hours for embeddings
     cache_inference_ttl: int = 3600  # 1 hour for inference
+    cache_completion_ttl: int = 7200  # 2 hours for code completions
+
+    # Code Completion Configuration
+    completion_max_tokens: int = 256  # Maximum tokens for completion (keep small for speed)
+    completion_temperature: float = 0.2  # Lower temperature for more deterministic completions
+    completion_num_ctx: int = 4096  # Context window size for completion model
+    completion_num_predict: int = 256  # Number of tokens to predict
 
     # Monitoring Configuration
     monitoring_enabled: bool = True

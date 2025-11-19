@@ -420,3 +420,40 @@ class AudioTranslateResponse(BaseModel):
     source_language: str | None = Field(None, description="Detected source language")
     duration: float | None = Field(None, description="Audio duration in seconds")
     model: str = Field(..., description="Model used for translation")
+
+
+# Code Completion Models (FIM - Fill-in-the-Middle)
+class CodeCompletionRequest(BaseModel):
+    """Request model for inline code completion using FIM"""
+
+    prefix: str = Field(..., description="Code before the cursor")
+    suffix: str = Field(default="", description="Code after the cursor")
+    language: str | None = Field(None, description="Programming language (e.g., 'python', 'javascript')")
+    model: str | None = Field(None, description="Code model to use (defaults to configured model)")
+    temperature: float | None = Field(None, ge=0.0, le=1.0, description="Sampling temperature (lower = more deterministic)")
+    max_tokens: int | None = Field(None, gt=0, le=512, description="Maximum tokens to generate")
+    stream: bool = Field(False, description="Stream the response for real-time completion")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "prefix": "def calculate_fibonacci(n: int) -> int:\n    if n <= 1:\n        return n\n    ",
+                "suffix": "\n    return result",
+                "language": "python",
+                "temperature": 0.2,
+                "max_tokens": 128,
+                "stream": False,
+            }
+        }
+
+
+class CodeCompletionResponse(BaseModel):
+    """Response model for code completion"""
+
+    completion: str = Field(..., description="Generated code completion")
+    model: str = Field(..., description="Model used for completion")
+    done: bool = Field(..., description="Whether generation is complete")
+    language: str | None = Field(None, description="Detected or specified programming language")
+    total_duration: int | None = Field(None, description="Total duration in nanoseconds")
+    eval_count: int | None = Field(None, description="Number of tokens generated")
+    tokens_per_second: float | None = Field(None, description="Generation speed in tokens/second")
