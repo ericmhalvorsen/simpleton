@@ -19,16 +19,6 @@ class InferenceRequest(BaseModel):
     system: str | None = Field(None, description="System prompt")
     context: list[int] | None = Field(None, description="Context from previous conversation")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "prompt": "Explain quantum computing in simple terms",
-                "model": "qwen2.5:7b",
-                "temperature": 0.7,
-                "max_tokens": 500,
-            }
-        }
-
 
 class InferenceResponse(BaseModel):
     """Response model for text inference/generation"""
@@ -52,14 +42,6 @@ class EmbeddingRequest(BaseModel):
     model: str | None = Field(
         None, description="Embedding model to use (defaults to configured model)"
     )
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "input": "The quick brown fox jumps over the lazy dog",
-                "model": "nomic-embed-text",
-            }
-        }
 
 
 class EmbeddingData(BaseModel):
@@ -93,18 +75,6 @@ class ChatRequest(BaseModel):
     stream: bool = Field(False, description="Stream the response")
     temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
     max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "messages": [
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "What is the capital of France?"},
-                ],
-                "model": "qwen2.5:7b",
-                "temperature": 0.7,
-            }
-        }
 
 
 class ChatResponse(BaseModel):
@@ -159,15 +129,6 @@ class DocumentIngestRequest(BaseModel):
         None, description="Overlap between chunks (defaults to configured overlap)"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "content": "This is a sample document about AI...",
-                "metadata": {"source": "article.pdf", "author": "John Doe", "date": "2025-01-15"},
-                "collection": "documents",
-            }
-        }
-
 
 class DocumentChunk(BaseModel):
     """A single document chunk"""
@@ -203,16 +164,6 @@ class RAGQueryRequest(BaseModel):
     temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
     max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "query": "What are the benefits of quantum computing?",
-                "collection": "documents",
-                "top_k": 3,
-                "model": "qwen2.5:7b",
-            }
-        }
-
 
 class SearchResult(BaseModel):
     """A single search result"""
@@ -246,16 +197,6 @@ class SemanticSearchRequest(BaseModel):
     score_threshold: float | None = Field(
         None, ge=0.0, le=1.0, description="Minimum similarity score"
     )
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "query": "machine learning algorithms",
-                "collection": "documents",
-                "top_k": 5,
-                "score_threshold": 0.7,
-            }
-        }
 
 
 class SemanticSearchResponse(BaseModel):
@@ -298,16 +239,6 @@ class VisionAnalyzeRequest(BaseModel):
     temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
     max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "image": "data:image/png;base64,iVBORw0KG...",
-                "prompt": "What objects are in this image?",
-                "model": "llava",
-                "temperature": 0.7,
-            }
-        }
-
 
 class VisionAnalyzeResponse(BaseModel):
     """Response model for vision analysis"""
@@ -328,15 +259,6 @@ class VisionCaptionRequest(BaseModel):
         "normal", description="Caption detail level: brief, normal, or detailed"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "image": "data:image/png;base64,iVBORw0KG...",
-                "model": "llava",
-                "detail_level": "normal",
-            }
-        }
-
 
 class VisionCaptionResponse(BaseModel):
     """Response model for image captioning"""
@@ -350,11 +272,6 @@ class VisionOCRRequest(BaseModel):
 
     image: str = Field(..., description="Base64 encoded image or image URL")
     model: str | None = Field(None, description="Vision model to use (defaults to llava)")
-
-    class Config:
-        json_schema_extra = {
-            "example": {"image": "data:image/png;base64,iVBORw0KG...", "model": "llava"}
-        }
 
 
 class VisionOCRResponse(BaseModel):
@@ -379,16 +296,6 @@ class AudioTranscribeRequest(BaseModel):
         "transcribe", description="Task type: 'transcribe' or 'translate' (to English)"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "audio": "data:audio/wav;base64,UklGRi...",
-                "language": "en",
-                "model": "base",
-                "task": "transcribe",
-            }
-        }
-
 
 class AudioTranscribeResponse(BaseModel):
     """Response model for audio transcription"""
@@ -406,11 +313,6 @@ class AudioTranslateRequest(BaseModel):
     model: str | None = Field(
         None, description="Whisper model size (tiny, base, small, medium, large)"
     )
-
-    class Config:
-        json_schema_extra = {
-            "example": {"audio": "data:audio/wav;base64,UklGRi...", "model": "base"}
-        }
 
 
 class AudioTranslateResponse(BaseModel):
@@ -433,18 +335,6 @@ class CodeCompletionRequest(BaseModel):
     temperature: float | None = Field(None, ge=0.0, le=1.0, description="Sampling temperature (lower = more deterministic)")
     max_tokens: int | None = Field(None, gt=0, le=512, description="Maximum tokens to generate")
     stream: bool = Field(False, description="Stream the response for real-time completion")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "prefix": "def calculate_fibonacci(n: int) -> int:\n    if n <= 1:\n        return n\n    ",
-                "suffix": "\n    return result",
-                "language": "python",
-                "temperature": 0.2,
-                "max_tokens": 128,
-                "stream": False,
-            }
-        }
 
 
 class CodeCompletionResponse(BaseModel):

@@ -1,4 +1,4 @@
-"""API Key Authentication for Simpleton LLM Service"""
+"""API Key Authentication"""
 
 from typing import Annotated
 
@@ -7,23 +7,10 @@ from fastapi.security import APIKeyHeader
 
 from app.config import settings
 
-# API Key header scheme
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 async def validate_api_key(api_key: Annotated[str | None, Security(api_key_header)]) -> str:
-    """
-    Validate the API key from the request header.
-
-    Args:
-        api_key: The API key from the X-API-Key header
-
-    Returns:
-        The validated API key
-
-    Raises:
-        HTTPException: If the API key is missing or invalid
-    """
     if api_key is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -41,5 +28,4 @@ async def validate_api_key(api_key: Annotated[str | None, Security(api_key_heade
     return api_key
 
 
-# Dependency for requiring API key authentication
 RequireAPIKey = Annotated[str, Security(validate_api_key)]
