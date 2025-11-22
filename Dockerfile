@@ -6,6 +6,7 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml .
 COPY .python-version .
+COPY README.md .
 
 # Install dependencies in the system Python (no venv in container)
 RUN uv pip install --system -e .
