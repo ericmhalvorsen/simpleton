@@ -10,16 +10,14 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
-    # Uncomment the following lines if you have an NVIDIA GPU
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
-  # Qdrant vector database - for RAG/semantic search
   qdrant:
     image: qdrant/qdrant:latest
     container_name: simpleton-qdrant
@@ -30,7 +28,6 @@ services:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
 
-  # Redis - for caching and metrics storage
   redis:
     image: redis:7-alpine
     container_name: simpleton-redis
@@ -41,7 +38,6 @@ services:
     command: redis-server --appendonly yes
     restart: unless-stopped
 
-  # ntfy - self-hosted notification service
   ntfy:
     image: binwiederhier/ntfy:latest
     container_name: simpleton-ntfy
@@ -52,7 +48,6 @@ services:
     command: serve
     restart: unless-stopped
 
-  # Simpleton API service
   simpleton:
     build: .
     container_name: simpleton-api
