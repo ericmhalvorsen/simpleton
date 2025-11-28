@@ -1,4 +1,4 @@
-name: Backend CI
+name: Backend
 
 on:
   push:
@@ -6,19 +6,21 @@ on:
     paths:
       - 'app/**'
       - 'pyproject.toml'
-      - 'requirements.txt'
-      - '.github/workflows/backend-ci.yml'
+      - 'uv.lock'
+      - 'Dockerfile'
+      - '.github/workflows/backend.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'app/**'
       - 'pyproject.toml'
-      - 'requirements.txt'
-      - '.github/workflows/backend-ci.yml'
+      - 'uv.lock'
+      - 'Dockerfile'
+      - '.github/workflows/backend.yml'
 
 jobs:
   lint:
-    name: Lint Python Code
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -36,16 +38,46 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: |
-          uv sync
+        run: uv sync
 
       - name: Run ruff linting
-        run: |
-          uv run ruff check app/
+        run: uv run ruff check app/
 
-      - name: Run ruff formatting check
+      - name: Run ruff format check
+        run: uv run ruff format --check app/
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
         run: |
-          uv run ruff format --check app/
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run bandit security checks
+        run: uv run bandit -r app/ -f json -o bandit-report.json || true
+
+      - name: Display bandit results
+        run: |
+          if [ -f bandit-report.json ]; then
+            cat bandit-report.json
+          fi
+
+      - name: Run safety dependency check
+        run: uv run safety check --json || true
 
   type-check:
     name: Type Check
@@ -66,17 +98,16 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: |
-          uv sync
+        run: uv sync
 
-      - name: Run mypy (if configured)
+      - name: Run mypy type checking
         run: |
-          # Uncomment when mypy is set up
+          # Placeholder - uncomment when mypy is configured
           # uv run mypy app/
-          echo "Type checking placeholder - add mypy when ready"
+          echo "Type checking placeholder - mypy will be enabled when configured"
 
   test:
-    name: Run Tests
+    name: Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -94,11 +125,10 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install dependencies with dev extras
-        run: |
-          uv sync --extra dev
+        run: uv sync --extra dev
 
       - name: Run pytest
         run: |
-          # Uncomment when tests are added
-          # uv run pytest
-          echo "Test placeholder - add tests when ready"
+          # Placeholder - uncomment when tests are added
+          # uv run pytest --cov=app --cov-report=term-missing
+          echo "Test placeholder - pytest will run when tests are added"
