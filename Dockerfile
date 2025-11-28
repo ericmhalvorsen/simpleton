@@ -9,6 +9,8 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
 
+COPY pyproject.toml uv.lock ./
+
 # Deps only for cache point
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
@@ -18,7 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # App code
 COPY app/ ./app/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
+    uv sync --locked --no-install-project --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
