@@ -1,32 +1,28 @@
-# frontend/Dockerfile
-FROM node:18-alpine as builder
+FROM oven/bun:1 AS base
+WORKDIR /usr/src/app
 
-WORKDIR /app
+FROM base AS install
+RUN mkdir -p /temp/dev
+COPY package.json bun.lock /temp/dev/
+RUN cd /temp/dev && bun install --frozen-lockfile
 
-# Install dependencies
-COPY package.json package-lock.json* ./
-RUN npm install
+RUN mkdir -p /temp/prod
+COPY package.json bun.lock /temp/prod/
+RUN cd /temp/prod && bun install --frozen-lockfile --production
 
-# Copy frontend source
+FROM base AS prerelease
+COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
 
-# Build the app
-RUN npm run build
+ENV NODE_ENV=production
+RUN bun test
+RUN bun run build
 
-# Production stage
-FROM node:18-alpine
+FROM base AS release
+COPY --from=install /temp/prod/node_modules node_modules
+COPY --from=prerelease /usr/src/app/index.ts .
+COPY --from=prerelease /usr/src/app/package.json .
 
-WORKDIR /app
-
-# Copy built assets and production dependencies
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/.svelte-kit ./.svelte-kit
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/static ./static
-
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Run the application with host binding
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0"]
+USER bun
+EXPOSE 3000/tcp
+ENTRYPOINT [ "bun", "run", "index.ts" ]
