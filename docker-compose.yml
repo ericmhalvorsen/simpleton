@@ -63,6 +63,10 @@ services:
       - NTFY_URL=http://ntfy:80
       # Fallback to environment variable or default value if not in .env
       - API_KEYS=${API_KEYS:-changeme}
+    volumes:
+      - ./src:/app/src
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./poetry.lock:/app/poetry.lock
     depends_on:
       - ollama
       - qdrant
@@ -80,6 +84,12 @@ services:
     environment:
       - VITE_API_BASE_URL=/api
       - VITE_API_KEY=${API_KEYS:-changeme}
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/package-lock.json:/app/package-lock.json
+      - ./frontend/vite.config.js:/app/vite.config.js
     ports:
       - "3000:3000"
     depends_on:
