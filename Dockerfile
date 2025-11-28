@@ -1,20 +1,31 @@
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
 
+RUN groupadd --system --gid 999 nonroot && \
+    useradd --system --gid 999 --uid 999 --create-home nonroot
+
 WORKDIR /app
 
-# Install dependencies using uv
-# Copy dependency files
-COPY pyproject.toml .
-COPY .python-version .
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
 
-# Copy application code (needed for editable install)
+# Deps only for cache point
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
+
+# App code
 COPY app/ ./app/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
 
-# Install dependencies in the system Python (no venv in container)
-RUN uv pip install --system -e .
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Expose port
+ENTRYPOINT []
+
 EXPOSE 8000
 
-# Run the application
+USER nonroot
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
