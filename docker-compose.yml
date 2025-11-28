@@ -68,6 +68,8 @@ services:
       - qdrant
       - redis
       - ntfy
+    volumes:
+      - ./app:/app/
     restart: unless-stopped
 
   frontend:
