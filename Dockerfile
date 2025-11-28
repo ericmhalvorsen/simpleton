@@ -7,11 +7,11 @@ WORKDIR /app
 COPY pyproject.toml .
 COPY .python-version .
 
+# Copy application code (needed for editable install)
+COPY app/ ./app/
+
 # Install dependencies in the system Python (no venv in container)
 RUN uv pip install --system -e .
-
-# Copy application code
-COPY app/ ./app/
 
 # Expose port
 EXPOSE 8000
