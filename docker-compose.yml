@@ -5,8 +5,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: simpleton-ollama
-    ports:
-      - "11434:11434"
+    # Removed port mapping to prevent direct access from host
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
@@ -53,19 +52,36 @@ services:
     container_name: simpleton-api
     ports:
       - "8000:8000"
+    # Load from .env file first, then override with environment variables
+    env_file:
+      - .env
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_HOST=http://ollama:11434
       - QDRANT_URL=http://qdrant:6333
       - REDIS_URL=redis://redis:6379
       - NTFY_URL=http://ntfy:80
-    env_file:
-      - .env
+      # Fallback to environment variable or default value if not in .env
+      - API_KEYS=${API_KEYS:-changeme}
     depends_on:
       - ollama
       - qdrant
       - redis
       - ntfy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: simpleton-frontend
+    environment:
+      - VITE_API_BASE_URL=/api
+      - VITE_API_KEY=${API_KEYS:-changeme}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - simpleton
     restart: unless-stopped
 
 volumes:
