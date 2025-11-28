@@ -64,20 +64,16 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
-        run: uv sync
+      - name: Install dependencies with dev extras
+        run: uv sync --extra dev
 
       - name: Run bandit security checks
-        run: uv run bandit -r app/ -f json -o bandit-report.json || true
-
-      - name: Display bandit results
         run: |
-          if [ -f bandit-report.json ]; then
-            cat bandit-report.json
-          fi
+          uv run bandit -r app/ -ll || true
 
       - name: Run safety dependency check
-        run: uv run safety check --json || true
+        run: |
+          uv run safety check --output bare || true
 
   type-check:
     name: Type Check
