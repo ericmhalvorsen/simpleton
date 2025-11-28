@@ -2,7 +2,9 @@
 # Install mise: curl https://mise.run | sh
 
 [tools]
+bun = "latest"
 python = "3.11"
+uv = "latest"
 
 [tasks.start]
 description = "Start all services"
