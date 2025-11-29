@@ -15,20 +15,24 @@ services:
     #     reservations:
     #       devices:
     #         - /dev/dri:/dev/dri
-    image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
+    # image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
+    build:
+      context: ../ipex-llm/docker/llm/inference-cpp/
+      dockerfile: Dockerfile
     restart: unless-stopped
     devices:
       - /dev/dri:/dev/dri
     volumes:
       - ollama_data:/root/.ollama
-    # ports:
-    #   - 11434:11434
+    ports:
+      - 11434:11434
     environment:
       - no_proxy=localhost,127.0.0.1
       - OLLAMA_HOST=0.0.0.0
       - DEVICE=Arc
       - OLLAMA_INTEL_GPU=true
       - OLLAMA_NUM_GPU=999
+      - HOSTNAME=ollama
       - ZES_ENABLE_SYSMAN=1
     command: sh -c 'mkdir -p /llm/ollama && cd /llm/ollama && init-ollama && exec ./ollama serve'
 
@@ -73,7 +77,7 @@ services:
       - NTFY_URL=http://ntfy:80
       - API_KEYS=${API_KEYS:-changeme}
     volumes:
-      - ./src:/app/src
+      - ./app:/app/app
       - ./pyproject.toml:/app/pyproject.toml
       - ./uv.lock:/app/uv.lock
     depends_on:

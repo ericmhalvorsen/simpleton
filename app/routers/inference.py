@@ -9,12 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from app.auth import RequireAPIKey
 from app.config import settings
-from app.models import (
-    ChatRequest,
-    ChatResponse,
-    InferenceRequest,
-    InferenceResponse,
-)
+from app.models import ChatRequest, ChatResponse, InferenceRequest, InferenceResponse
 from app.utils.cache import get_cache_client
 from app.utils.monitoring import CACHE_HITS, CACHE_MISSES
 
@@ -102,7 +97,9 @@ async def generate_text(
                 response.raise_for_status()
                 data = response.json()
 
-                cache.set("inference", cache_key_data, data, ttl=settings.cache_inference_ttl)
+                cache.set(
+                    "inference", cache_key_data, data, ttl=settings.cache_inference_ttl
+                )
 
                 return InferenceResponse(**data)
 
@@ -146,10 +143,12 @@ async def chat_completion(
         payload["options"] = options
 
     cache = get_cache_client(settings.redis_url, settings.cache_enabled)
+    logger.error("TESTING LOGGER")
 
     try:
         async with httpx.AsyncClient(timeout=300.0) as client:
             if request.stream:
+                logger.error("TEST1")
                 response = await client.post(
                     f"{settings.ollama_base_url}/api/chat",
                     json=payload,
@@ -178,6 +177,7 @@ async def chat_completion(
                 CACHE_MISSES.labels(cache_type="chat").inc()
                 logger.debug(f"Cache miss for chat (model: {model})")
 
+                logger.error("test2")
                 response = await client.post(
                     f"{settings.ollama_base_url}/api/chat",
                     json=payload,
@@ -185,7 +185,9 @@ async def chat_completion(
                 response.raise_for_status()
                 data = response.json()
 
-                cache.set("chat", cache_key_data, data, ttl=settings.cache_inference_ttl)
+                cache.set(
+                    "chat", cache_key_data, data, ttl=settings.cache_inference_ttl
+                )
 
                 return ChatResponse(**data)
 
