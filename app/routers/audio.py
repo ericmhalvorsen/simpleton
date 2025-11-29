@@ -5,10 +5,10 @@ import logging
 import os
 import tempfile
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Security, UploadFile, status
 from faster_whisper import WhisperModel
 
-from app.auth import RequireAPIKey
+from app.auth import RequireAPIKey, validate_api_key
 from app.config import settings
 from app.models import (
     AudioTranscribeRequest,
@@ -263,7 +263,7 @@ async def upload_and_transcribe(
     file: UploadFile = File(...),
     language: str | None = None,
     model: str | None = None,
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Upload an audio file and transcribe it.
@@ -309,7 +309,7 @@ async def upload_and_transcribe(
 async def upload_and_translate(
     file: UploadFile = File(...),
     model: str | None = None,
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Upload an audio file and translate it to English.

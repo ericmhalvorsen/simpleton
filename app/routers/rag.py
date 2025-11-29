@@ -140,8 +140,9 @@ async def ingest_document(
             chunk_ids.append(chunk_id)
 
             metadata = {
-                **request.metadata,
+                **(request.metadata or {}),  # Handle None case with or {}
                 "chunk_index": chunk_info["index"],
+                "chunk_id": chunk_id,  # Add chunk_id for traceability
                 "char_start": chunk_info["char_start"],
                 "char_end": chunk_info["char_end"],
                 "chunk_length": chunk_info["length"],

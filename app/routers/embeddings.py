@@ -3,9 +3,9 @@
 import logging
 
 import httpx
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Security, status
 
-from app.auth import RequireAPIKey
+from app.auth import RequireAPIKey, validate_api_key
 from app.config import settings
 from app.models import EmbeddingRequest, EmbeddingResponse
 from app.utils.cache import get_cache_client
@@ -115,7 +115,7 @@ async def create_embeddings(
 async def create_batch_embeddings(
     texts: list[str],
     model: str | None = None,
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Generate embeddings for a batch of texts.

@@ -1,8 +1,8 @@
 """Analytics and monitoring endpoints"""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Security, status
 
-from app.auth import RequireAPIKey
+from app.auth import RequireAPIKey, validate_api_key
 from app.config import settings
 from app.utils.cache import get_cache_client
 from app.utils.monitoring import get_metrics_store
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 @router.get("/stats")
 async def get_stats(
     since_minutes: int | None = None,
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Get service statistics and metrics.
@@ -42,7 +42,7 @@ async def get_stats(
 @router.get("/errors")
 async def get_recent_errors(
     limit: int = 10,
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Get recent errors.
@@ -64,7 +64,7 @@ async def get_recent_errors(
 
 @router.get("/alerts")
 async def check_alerts(
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Check for active alerts.
@@ -122,7 +122,7 @@ async def check_alerts(
 
 @router.get("/cache")
 async def get_cache_stats(
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Get cache statistics.
@@ -145,7 +145,7 @@ async def get_cache_stats(
 @router.delete("/cache")
 async def clear_cache(
     prefix: str | None = None,
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Clear cache entries.
@@ -181,7 +181,7 @@ async def clear_cache(
 
 @router.post("/notifications/test")
 async def test_notification(
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Test notification system.
