@@ -164,7 +164,9 @@ async def caption_image(
         "detailed": "Provide a comprehensive and detailed description of this image, including all visible elements, colors, actions, and context.",
     }
 
-    prompt = prompts.get(request.detail_level, prompts["normal"])
+    # Ensure detail_level is one of the valid options
+    detail_level = request.detail_level if request.detail_level in prompts else "normal"
+    prompt = prompts[detail_level]
 
     try:
         # Process image input
@@ -284,10 +286,10 @@ async def extract_text(
 
 @router.post("/upload")
 async def upload_image_for_analysis(
+    api_key: RequireAPIKey,
     file: UploadFile = File(...),
     prompt: str = "Describe this image",
     model: str | None = None,
-    api_key: RequireAPIKey = None,
 ):
     """
     Upload an image file and analyze it.
@@ -315,15 +317,19 @@ async def upload_image_for_analysis(
             image = Image.open(BytesIO(content))
             image.verify()
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid image file: {str(e)}"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid image file: {str(e)}")
 
         # Convert to base64
         image_b64 = base64.b64encode(content).decode("utf-8")
 
-        # Create analyze request
-        analyze_request = VisionAnalyzeRequest(image=image_b64, prompt=prompt, model=model)
+        # Create analyze request with default parameters from the model
+        analyze_request = VisionAnalyzeRequest(
+            image=image_b64,
+            prompt=prompt,
+            model=model,
+            temperature=0.7,  # Default temperature
+            max_tokens=512,  # Default max tokens
+        )
 
         # Use the analyze endpoint
         return await analyze_image(analyze_request, api_key)

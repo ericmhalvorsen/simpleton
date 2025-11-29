@@ -1,0 +1,45 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  trivy-repo:
+    name: Repo Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Repo scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'repo'
+          scan-ref: '.'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  shai-hulud:
+    name: Shai-Hulud
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Shai-Hulud 2.0 Detector
+        uses: gensecaihq/Shai-Hulud-2.0-Detector@v1
+        with:
+          fail-on-critical: true

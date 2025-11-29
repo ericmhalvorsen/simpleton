@@ -1,0 +1,63 @@
+name: Backend
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'app/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Dockerfile'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'app/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Dockerfile'
+      - '.github/workflows/backend.yml'
+
+jobs:
+  checks:
+    name: Lints and Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run ruff linting
+        run: uv run ruff check app/
+
+      - name: Run ruff format check
+        run: uv run ruff format --check app/
+
+      - name: Run bandit security checks
+        run: |
+          uv run bandit -r app/ -ll || true
+
+      - name: Run safety dependency check
+        run: |
+          uv run safety check --output bare || true
+
+      - name: Run type checking
+        run: |
+          uv run pyright app/
+
+      - name: Run pytest
+        run: |
+          uv run pytest

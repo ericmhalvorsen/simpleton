@@ -13,8 +13,8 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 @router.get("/stats")
 async def get_stats(
+    api_key: RequireAPIKey,
     since_minutes: int | None = None,
-    api_key: RequireAPIKey = None,
 ):
     """
     Get service statistics and metrics.
@@ -41,8 +41,8 @@ async def get_stats(
 
 @router.get("/errors")
 async def get_recent_errors(
+    api_key: RequireAPIKey,
     limit: int = 10,
-    api_key: RequireAPIKey = None,
 ):
     """
     Get recent errors.
@@ -64,7 +64,7 @@ async def get_recent_errors(
 
 @router.get("/alerts")
 async def check_alerts(
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey,
 ):
     """
     Check for active alerts.
@@ -122,7 +122,7 @@ async def check_alerts(
 
 @router.get("/cache")
 async def get_cache_stats(
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey,
 ):
     """
     Get cache statistics.
@@ -144,8 +144,8 @@ async def get_cache_stats(
 
 @router.delete("/cache")
 async def clear_cache(
+    api_key: RequireAPIKey,
     prefix: str | None = None,
-    api_key: RequireAPIKey = None,
 ):
     """
     Clear cache entries.
@@ -181,7 +181,7 @@ async def clear_cache(
 
 @router.post("/notifications/test")
 async def test_notification(
-    api_key: RequireAPIKey = None,
+    api_key: RequireAPIKey,
 ):
     """
     Test notification system.

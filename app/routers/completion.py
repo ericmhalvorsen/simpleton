@@ -164,7 +164,9 @@ async def inline_completion(
                 logger.info(
                     f"Completion generated: {data.get('eval_count', 0)} tokens "
                     f"in {data.get('total_duration', 0) / 1_000_000:.0f}ms "
-                    f"({tokens_per_second:.1f} tok/s)" if tokens_per_second else ""
+                    f"({tokens_per_second:.1f} tok/s)"
+                    if tokens_per_second
+                    else ""
                 )
 
                 return CodeCompletionResponse(**completion_response)

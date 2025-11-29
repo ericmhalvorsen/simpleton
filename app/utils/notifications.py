@@ -143,9 +143,7 @@ class NotificationService:
             logger.error(f"Telegram notification failed: {e}")
             return False
 
-    async def send_startup(
-        self, service_name: str = "Simpleton", host: str = "localhost", port: int = 8000
-    ):
+    async def send_startup(self, service_name: str = "Simpleton", host: str = "localhost", port: int = 8000):
         """Send startup notification"""
         await self.send(
             title=f"🚀 {service_name} Started",
@@ -179,10 +177,16 @@ class NotificationService:
             "critical": "🚨",
         }
 
+        # Ensure priority is one of the allowed literal values
+        priority = priority_map.get(severity, "high")
+        priority_literal: Literal["min", "low", "default", "high", "urgent"] = (
+            "high" if priority not in ["min", "low", "default", "high", "urgent"] else priority  # type: ignore
+        )
+
         await self.send(
             title=f"{emoji_map.get(severity, '⚠️')} Alert: {alert_type}",
             message=message,
-            priority=priority_map.get(severity, "high"),
+            priority=priority_literal,
             tags=[severity, "alert"],
         )
 

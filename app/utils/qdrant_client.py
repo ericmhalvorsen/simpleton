@@ -190,9 +190,7 @@ class QdrantVectorStore:
 
         # Create points
         points = []
-        for i, (doc_id, doc, embedding, meta) in enumerate(
-            zip(ids, documents, embeddings, metadata)
-        ):
+        for i, (doc_id, doc, embedding, meta) in enumerate(zip(ids, documents, embeddings, metadata)):
             # Add document text to metadata
             payload = {"text": doc, **meta}
 
@@ -251,12 +249,13 @@ class QdrantVectorStore:
             # Format results
             formatted_results = []
             for result in results:
+                payload = result.payload or {}
                 formatted_results.append(
                     {
                         "id": str(result.id),
                         "score": result.score,
-                        "text": result.payload.get("text", ""),
-                        "metadata": {k: v for k, v in result.payload.items() if k != "text"},
+                        "text": payload.get("text", ""),
+                        "metadata": {k: v for k, v in payload.items() if k != "text"},
                     }
                 )
 
@@ -266,6 +265,19 @@ class QdrantVectorStore:
         except Exception as e:
             logger.error(f"Search failed: {e}")
             raise
+
+    def _calculate_hit_rate(self, hits: int, misses: int) -> float:
+        """Calculate hit rate from hits and misses.
+
+        Args:
+            hits: Number of cache hits
+            misses: Number of cache misses
+
+        Returns:
+            Hit rate as a float between 0 and 1, or 0 if no requests
+        """
+        total = hits + misses
+        return hits / total if total > 0 else 0.0
 
     def get_document(self, collection_name: str, document_id: str) -> dict[str, Any] | None:
         """
@@ -286,12 +298,18 @@ class QdrantVectorStore:
                 with_vectors=False,
             )
 
-            if result:
+            if result and result[0].payload:
                 point = result[0]
+                payload = point.payload or {}
                 return {
                     "id": str(point.id),
-                    "text": point.payload.get("text", ""),
-                    "metadata": {k: v for k, v in point.payload.items() if k != "text"},
+                    "text": payload.get("text", ""),
+                    "metadata": {k: v for k, v in payload.items() if k != "text"},
+                    "keys": 0,  # Removed dbsize as it's not a standard QdrantClient method
+                    "hits": 0,  # These metrics are Redis-specific, not Qdrant
+                    "misses": 0,
+                    "hit_rate": 0.0,
+                    "memory_usage": 0,
                 }
 
             return None
@@ -312,9 +330,33 @@ class QdrantVectorStore:
             True if successful
         """
         try:
+            import uuid
+            from typing import Union
+
+            point_ids: list[Union[str, int]] = []
+            for id_str in document_ids:
+                try:
+                    # Convert to string first to handle both string and UUID objects
+                    id_str = str(id_str)
+                    # Try to convert to UUID first, then to integer
+                    try:
+                        point_id = str(uuid.UUID(id_str))
+                    except ValueError:
+                        # If not a valid UUID, try to use as integer
+                        point_id = int(id_str)
+                    point_ids.append(point_id)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Invalid document ID format {id_str}: {e}")
+                    continue
+
+            if not point_ids:
+                logger.warning("No valid document IDs provided for deletion")
+                return False
+
+            # Use the raw point IDs with type ignore since we've ensured they're the correct types
             self.client.delete(
                 collection_name=collection_name,
-                points_selector=models.PointIdsList(points=document_ids),
+                points_selector=models.PointIdsList(points=point_ids),  # type: ignore
             )
             logger.info(f"Deleted {len(document_ids)} documents from {collection_name}")
             return True

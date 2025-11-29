@@ -1,6 +1,7 @@
 """Simpleton - Personal LLM Service"""
 
 import logging
+from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException, Response, status
@@ -21,12 +22,54 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown events"""
+    # Startup
+    if settings.notifications_enabled and settings.notify_on_startup:
+        try:
+            notification_service = get_notification_service(
+                ntfy_url=settings.ntfy_url,
+                ntfy_topic=settings.ntfy_topic,
+                telegram_bot_token=settings.telegram_bot_token,
+                telegram_chat_id=settings.telegram_chat_id,
+                enabled=settings.notifications_enabled,
+            )
+            await notification_service.send_startup(
+                service_name="Simpleton",
+                host=settings.host,
+                port=settings.port,
+            )
+            logger.info("Startup notification sent")
+        except Exception as e:
+            logger.error(f"Failed to send startup notification: {e}")
+
+    yield
+
+    # Shutdown
+    if settings.notifications_enabled:
+        try:
+            notification_service = get_notification_service(
+                ntfy_url=settings.ntfy_url,
+                ntfy_topic=settings.ntfy_topic,
+                telegram_bot_token=settings.telegram_bot_token,
+                telegram_chat_id=settings.telegram_chat_id,
+                enabled=settings.notifications_enabled,
+            )
+            await notification_service.send_shutdown(service_name="Simpleton")
+            logger.info("Shutdown notification sent")
+        except Exception as e:
+            logger.error(f"Failed to send shutdown notification: {e}")
+
+
 app = FastAPI(
     title="Simpleton LLM Service",
     description="Personal LLM inference and embedding service",
     version=__version__,
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -49,45 +92,6 @@ app.include_router(rag.router)
 app.include_router(analytics.router)
 app.include_router(vision.router)
 app.include_router(audio.router)
-
-
-# Startup/Shutdown Events
-@app.on_event("startup")
-async def startup_event():
-    if settings.notifications_enabled and settings.notify_on_startup:
-        try:
-            notification_service = get_notification_service(
-                ntfy_url=settings.ntfy_url,
-                ntfy_topic=settings.ntfy_topic,
-                telegram_bot_token=settings.telegram_bot_token,
-                telegram_chat_id=settings.telegram_chat_id,
-                enabled=settings.notifications_enabled,
-            )
-            await notification_service.send_startup(
-                service_name="Simpleton",
-                host=settings.host,
-                port=settings.port,
-            )
-            logger.info("Startup notification sent")
-        except Exception as e:
-            logger.error(f"Failed to send startup notification: {e}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    if settings.notifications_enabled:
-        try:
-            notification_service = get_notification_service(
-                ntfy_url=settings.ntfy_url,
-                ntfy_topic=settings.ntfy_topic,
-                telegram_bot_token=settings.telegram_bot_token,
-                telegram_chat_id=settings.telegram_chat_id,
-                enabled=settings.notifications_enabled,
-            )
-            await notification_service.send_shutdown(service_name="Simpleton")
-            logger.info("Shutdown notification sent")
-        except Exception as e:
-            logger.error(f"Failed to send shutdown notification: {e}")
 
 
 @app.get("/", response_model=dict)

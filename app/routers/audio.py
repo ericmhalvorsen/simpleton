@@ -260,10 +260,10 @@ async def translate_audio(
 
 @router.post("/upload/transcribe")
 async def upload_and_transcribe(
+    api_key: RequireAPIKey,
     file: UploadFile = File(...),
     language: str | None = None,
     model: str | None = None,
-    api_key: RequireAPIKey = None,
 ):
     """
     Upload an audio file and transcribe it.
@@ -290,9 +290,7 @@ async def upload_and_transcribe(
         audio_b64 = base64.b64encode(content).decode("utf-8")
 
         # Create transcribe request
-        transcribe_request = AudioTranscribeRequest(
-            audio=audio_b64, language=language, model=model, task="transcribe"
-        )
+        transcribe_request = AudioTranscribeRequest(audio=audio_b64, language=language, model=model, task="transcribe")
 
         # Use the transcribe endpoint
         return await transcribe_audio(transcribe_request, api_key)
@@ -309,9 +307,9 @@ async def upload_and_transcribe(
 
 @router.post("/upload/translate")
 async def upload_and_translate(
+    api_key: RequireAPIKey,
     file: UploadFile = File(...),
     model: str | None = None,
-    api_key: RequireAPIKey = None,
 ):
     """
     Upload an audio file and translate it to English.

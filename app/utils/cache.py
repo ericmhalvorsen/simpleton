@@ -1,12 +1,18 @@
 """Redis caching utility for responses"""
 
+from __future__ import annotations
+
 import hashlib
 import json
 import logging
-from typing import Any
+from typing import Any, Dict, Optional, TypeVar, cast
 
 from redis import Redis
 from redis.exceptions import RedisError
+
+# Define a proper type variable for response types
+T = TypeVar("T")
+ResponseT = TypeVar("ResponseT")
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +20,7 @@ logger = logging.getLogger(__name__)
 class CacheClient:
     """Redis cache client for caching LLM responses"""
 
-    def __init__(self, redis_url: str, enabled: bool = True):
+    def __init__(self, redis_url: str, enabled: bool = True) -> None:
         """
         Initialize Redis cache client
 
@@ -24,12 +30,14 @@ class CacheClient:
         """
         self.enabled = enabled
         self.redis_url = redis_url
-        self._client = None
+        self._client: Optional[Redis] = None  # type: ignore[valid-type]
 
         if self.enabled:
             try:
                 self._client = Redis.from_url(redis_url, decode_responses=True)
-                # Test connection
+                if self._client is None:
+                    raise RedisError("client failed to initialize")
+
                 self._client.ping()
                 logger.info(f"Connected to Redis cache at {redis_url}")
             except RedisError as e:
@@ -37,7 +45,7 @@ class CacheClient:
                 self.enabled = False
                 self._client = None
 
-    def _generate_key(self, prefix: str, data: dict) -> str:
+    def _generate_key(self, prefix: str, data: Dict[str, Any]) -> str:
         """
         Generate a cache key from data
 
@@ -48,12 +56,11 @@ class CacheClient:
         Returns:
             Cache key string
         """
-        # Sort dict for consistent hashing
         data_str = json.dumps(data, sort_keys=True)
-        data_hash = hashlib.sha256(data_str.encode()).hexdigest()[:16]
-        return f"{prefix}:{data_hash}"
+        key_hash = hashlib.md5(data_str.encode()).hexdigest()
+        return f"{prefix}:{key_hash}"
 
-    def get(self, prefix: str, data: dict) -> Any | None:
+    def get(self, prefix: str, data: Dict[str, Any]) -> Optional[Any]:
         """
         Get cached value
 
@@ -70,19 +77,17 @@ class CacheClient:
         try:
             key = self._generate_key(prefix, data)
             value = self._client.get(key)
-
-            if value:
+            if value is not None and isinstance(value, (str, bytes, bytearray)):
                 logger.debug(f"Cache hit for key: {key}")
                 return json.loads(value)
-            else:
-                logger.debug(f"Cache miss for key: {key}")
-                return None
+            logger.debug(f"Cache miss for key: {key}")
+            return None
 
-        except RedisError as e:
+        except (RedisError, json.JSONDecodeError) as e:
             logger.error(f"Cache get error: {e}")
             return None
 
-    def set(self, prefix: str, data: dict, value: Any, ttl: int = 3600) -> bool:
+    def set(self, prefix: str, data: Dict[str, Any], value: Any, ttl: int = 3600) -> bool:
         """
         Set cached value
 
@@ -101,15 +106,15 @@ class CacheClient:
         try:
             key = self._generate_key(prefix, data)
             value_json = json.dumps(value)
-            self._client.setex(key, ttl, value_json)
+            self._client.setex(key, ttl, value_json)  # type: ignore[arg-type]
             logger.debug(f"Cached value for key: {key} (TTL: {ttl}s)")
             return True
 
-        except RedisError as e:
+        except (RedisError, TypeError) as e:
             logger.error(f"Cache set error: {e}")
             return False
 
-    def delete(self, prefix: str, data: dict) -> bool:
+    def delete(self, prefix: str, data: Dict[str, Any]) -> bool:
         """
         Delete cached value
 
@@ -125,7 +130,7 @@ class CacheClient:
 
         try:
             key = self._generate_key(prefix, data)
-            self._client.delete(key)
+            self._client.delete(key)  # type: ignore[attr-defined]
             logger.debug(f"Deleted cache key: {key}")
             return True
 
@@ -133,7 +138,7 @@ class CacheClient:
             logger.error(f"Cache delete error: {e}")
             return False
 
-    def clear_prefix(self, prefix: str) -> int:
+    async def clear_prefix(self, prefix: str) -> int:
         """
         Clear all keys with a given prefix
 
@@ -147,16 +152,13 @@ class CacheClient:
             return 0
 
         try:
-            pattern = f"{prefix}:*"
-            keys = list(self._client.scan_iter(match=pattern))
+            keys = await self._client.keys(f"{prefix}:*")
             if keys:
-                deleted = self._client.delete(*keys)
-                logger.info(f"Cleared {deleted} keys with prefix: {prefix}")
-                return deleted
+                str_keys = [key.decode("utf-8") if isinstance(key, bytes) else key for key in keys]
+                return cast(int, self._client.delete(*str_keys))  # type: ignore[attr-defined]
             return 0
-
-        except RedisError as e:
-            logger.error(f"Cache clear error: {e}")
+        except (RedisError, AttributeError) as e:
+            logger.error(f"Error clearing cache prefix {prefix}: {e}")
             return 0
 
     def clear_all(self) -> bool:
@@ -170,15 +172,15 @@ class CacheClient:
             return False
 
         try:
-            self._client.flushdb()
+            self._client.flushdb()  # type: ignore[attr-defined]
             logger.info("Cleared all cache entries")
             return True
 
-        except RedisError as e:
+        except (RedisError, AttributeError) as e:
             logger.error(f"Cache flush error: {e}")
             return False
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> Dict[str, Any]:
         """
         Get cache statistics
 
@@ -186,44 +188,65 @@ class CacheClient:
             Dictionary with cache stats
         """
         if not self.enabled or not self._client:
-            return {"enabled": False, "status": "disabled"}
-
-        try:
-            info = self._client.info("stats")
-            memory_info = self._client.info("memory")
-
             return {
-                "enabled": True,
-                "status": "connected",
-                "total_keys": self._client.dbsize(),
-                "hits": info.get("keyspace_hits", 0),
-                "misses": info.get("keyspace_misses", 0),
-                "hit_rate": self._calculate_hit_rate(
-                    info.get("keyspace_hits", 0), info.get("keyspace_misses", 0)
-                ),
-                "memory_used_mb": round(memory_info.get("used_memory", 0) / 1024 / 1024, 2),
-                "memory_peak_mb": round(memory_info.get("used_memory_peak", 0) / 1024 / 1024, 2),
+                "enabled": False,
+                "keys": 0,
+                "hits": 0,
+                "misses": 0,
+                "hit_rate": 0.0,
+                "memory_usage": 0,
             }
 
-        except RedisError as e:
-            logger.error(f"Failed to get cache stats: {e}")
-            return {"enabled": True, "status": "error", "error": str(e)}
+        try:
+            info = self._client.info()  # type: ignore[attr-defined]
+            if not isinstance(info, dict):
+                raise ValueError("Unexpected Redis info format")
+
+            keyspace_hits = int(info.get("keyspace_hits", 0))
+            keyspace_misses = int(info.get("keyspace_misses", 0))
+
+            stats: Dict[str, Any] = {
+                "enabled": True,
+                "keys": int(self._client.dbsize()),  # type: ignore[attr-defined]
+                "hits": keyspace_hits,
+                "misses": keyspace_misses,
+                "hit_rate": self._calculate_hit_rate(keyspace_hits, keyspace_misses),
+                "memory_usage": int(info.get("used_memory", 0)),
+            }
+            return stats
+        except (RedisError, ValueError, AttributeError) as e:
+            logger.error(f"Error getting cache stats: {e}")
+            return {
+                "enabled": False,
+                "error": str(e),
+            }
 
     def _calculate_hit_rate(self, hits: int, misses: int) -> float:
-        """Calculate cache hit rate"""
-        total = hits + misses
-        if total == 0:
-            return 0.0
-        return round((hits / total) * 100, 2)
+        """
+        Calculate cache hit rate
 
-    def close(self):
+        Args:
+            hits: Number of cache hits
+            misses: Number of cache misses
+
+        Returns:
+            Hit rate as a percentage (0.0 to 100.0)
+        """
+        try:
+            total = hits + misses
+            if total == 0:
+                return 0.0
+            return round((hits / total) * 100, 2)
+        except (TypeError, ZeroDivisionError):
+            return 0.0
+
+    def close(self) -> None:
         """Close Redis connection"""
         if self._client:
-            self._client.close()
+            self._client.close()  # type: ignore[attr-defined]
             logger.info("Closed Redis connection")
 
 
-# Global cache instance (initialized when needed)
 _cache_client: CacheClient | None = None
 
 
