@@ -1,25 +1,39 @@
 version: '3.8'
 
 services:
-  # Ollama service - runs the LLM models
   ollama:
-    image: ollama/ollama:latest
-    container_name: simpleton-ollama
-    # Removed port mapping to prevent direct access from host
+    # image: ollama/ollama:latest
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # container_name: simpleton-ollama
+    # # Removed port mapping to prevent direct access from host
+    # volumes:
+    #   - ollama_data:/root/.ollama
+    # restart: unless-stopped
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - /dev/dri:/dev/dri
+    image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri
     volumes:
       - ollama_data:/root/.ollama
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # ports:
+    #   - 11434:11434
+    environment:
+      - no_proxy=localhost,127.0.0.1
+      - OLLAMA_HOST=0.0.0.0
+      - DEVICE=Arc
+      - OLLAMA_INTEL_GPU=true
+      - OLLAMA_NUM_GPU=999
+      - ZES_ENABLE_SYSMAN=1
+    command: sh -c 'mkdir -p /llm/ollama && cd /llm/ollama && init-ollama && exec ./ollama serve'
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: simpleton-qdrant
     ports:
       - "6333:6333"  # REST API
       - "6334:6334"  # gRPC API
@@ -29,7 +43,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: simpleton-redis
     ports:
       - "6379:6379"
     volumes:
@@ -39,7 +52,6 @@ services:
 
   ntfy:
     image: binwiederhier/ntfy:latest
-    container_name: simpleton-ntfy
     ports:
       - "8080:80"
     volumes:
@@ -49,7 +61,6 @@ services:
 
   simpleton:
     build: .
-    container_name: simpleton-api
     ports:
       - "8000:8000"
     env_file:
@@ -77,18 +88,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: install
-    container_name: simpleton-frontend
     environment:
       - VITE_API_BASE_URL=/api
       - VITE_API_KEY=${API_KEYS:-changeme}
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/package-lock.json:/app/package-lock.json
-      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend:/app
     ports:
-      - "3000:3000"
+      - "5173:5173"
     depends_on:
       - simpleton
     restart: unless-stopped
