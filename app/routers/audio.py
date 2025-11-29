@@ -5,10 +5,10 @@ import logging
 import os
 import tempfile
 
-from fastapi import APIRouter, File, HTTPException, Security, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from faster_whisper import WhisperModel
 
-from app.auth import RequireAPIKey, validate_api_key
+from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import (
     AudioTranscribeRequest,

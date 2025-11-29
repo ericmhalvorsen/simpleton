@@ -3,9 +3,9 @@
 import logging
 
 import httpx
-from fastapi import APIRouter, HTTPException, Security, status
+from fastapi import APIRouter, HTTPException, status
 
-from app.auth import RequireAPIKey, validate_api_key
+from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import EmbeddingRequest, EmbeddingResponse
 from app.utils.cache import get_cache_client

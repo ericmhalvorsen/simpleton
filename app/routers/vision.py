@@ -5,10 +5,10 @@ import logging
 from io import BytesIO
 
 import httpx
-from fastapi import APIRouter, File, HTTPException, Security, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from PIL import Image
 
-from app.auth import RequireAPIKey, validate_api_key
+from app.auth import RequireAPIKey
 from app.config import settings
 from app.models import (
     VisionAnalyzeRequest,
