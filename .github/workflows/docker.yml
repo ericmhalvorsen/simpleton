@@ -121,12 +121,6 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '0'
 
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-backend-results.sarif'
-
   trivy-frontend-image:
     name: Trivy Frontend
     runs-on: ubuntu-latest
@@ -150,10 +144,4 @@ jobs:
           output: 'trivy-frontend-results.sarif'
           severity: 'HIGH,CRITICAL'
           exit-code: '0'
-
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-frontend-results.sarif'
 
