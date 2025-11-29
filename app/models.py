@@ -39,9 +39,7 @@ class EmbeddingRequest(BaseModel):
     """Request model for generating embeddings"""
 
     input: str | list[str] = Field(..., description="Text or list of texts to embed")
-    model: str | None = Field(
-        None, description="Embedding model to use (defaults to configured model)"
-    )
+    model: str | None = Field(None, description="Embedding model to use (defaults to configured model)")
 
 
 class EmbeddingData(BaseModel):
@@ -119,15 +117,9 @@ class DocumentIngestRequest(BaseModel):
 
     content: str = Field(..., description="Document content to ingest")
     metadata: dict[str, Any] | None = Field(default_factory=dict, description="Document metadata")
-    collection: str | None = Field(
-        None, description="Collection name (defaults to configured collection)"
-    )
-    chunk_size: int | None = Field(
-        None, description="Chunk size for splitting (defaults to configured size)"
-    )
-    chunk_overlap: int | None = Field(
-        None, description="Overlap between chunks (defaults to configured overlap)"
-    )
+    collection: str | None = Field(None, description="Collection name (defaults to configured collection)")
+    chunk_size: int | None = Field(None, description="Chunk size for splitting (defaults to configured size)")
+    chunk_overlap: int | None = Field(None, description="Overlap between chunks (defaults to configured overlap)")
 
 
 class DocumentChunk(BaseModel):
@@ -151,15 +143,9 @@ class RAGQueryRequest(BaseModel):
     """Request model for RAG-powered query"""
 
     query: str = Field(..., description="Query text")
-    collection: str | None = Field(
-        None, description="Collection to search (defaults to configured collection)"
-    )
-    top_k: int | None = Field(
-        None, description="Number of results to retrieve (defaults to configured top_k)"
-    )
-    model: str | None = Field(
-        None, description="Model for generation (defaults to configured model)"
-    )
+    collection: str | None = Field(None, description="Collection to search (defaults to configured collection)")
+    top_k: int | None = Field(None, description="Number of results to retrieve (defaults to configured top_k)")
+    model: str | None = Field(None, description="Model for generation (defaults to configured model)")
     system_prompt: str | None = Field(None, description="System prompt for generation")
     temperature: float | None = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
     max_tokens: int | None = Field(None, gt=0, description="Maximum tokens to generate")
@@ -188,15 +174,9 @@ class SemanticSearchRequest(BaseModel):
     """Request model for semantic search"""
 
     query: str = Field(..., description="Search query")
-    collection: str | None = Field(
-        None, description="Collection to search (defaults to configured collection)"
-    )
-    top_k: int | None = Field(
-        None, description="Number of results to return (defaults to configured top_k)"
-    )
-    score_threshold: float | None = Field(
-        None, ge=0.0, le=1.0, description="Minimum similarity score"
-    )
+    collection: str | None = Field(None, description="Collection to search (defaults to configured collection)")
+    top_k: int | None = Field(None, description="Number of results to return (defaults to configured top_k)")
+    score_threshold: float | None = Field(None, ge=0.0, le=1.0, description="Minimum similarity score")
 
 
 class SemanticSearchResponse(BaseModel):
@@ -255,9 +235,7 @@ class VisionCaptionRequest(BaseModel):
 
     image: str = Field(..., description="Base64 encoded image or image URL")
     model: str | None = Field(None, description="Vision model to use (defaults to llava)")
-    detail_level: str | None = Field(
-        "normal", description="Caption detail level: brief, normal, or detailed"
-    )
+    detail_level: str | None = Field("normal", description="Caption detail level: brief, normal, or detailed")
 
 
 class VisionCaptionResponse(BaseModel):
@@ -289,12 +267,8 @@ class AudioTranscribeRequest(BaseModel):
     language: str | None = Field(
         None, description="Language code (e.g., 'en', 'es', 'fr'). Auto-detect if not specified"
     )
-    model: str | None = Field(
-        None, description="Whisper model size (tiny, base, small, medium, large)"
-    )
-    task: str | None = Field(
-        "transcribe", description="Task type: 'transcribe' or 'translate' (to English)"
-    )
+    model: str | None = Field(None, description="Whisper model size (tiny, base, small, medium, large)")
+    task: str | None = Field("transcribe", description="Task type: 'transcribe' or 'translate' (to English)")
 
 
 class AudioTranscribeResponse(BaseModel):
@@ -310,9 +284,7 @@ class AudioTranslateRequest(BaseModel):
     """Request model for audio translation to English"""
 
     audio: str = Field(..., description="Base64 encoded audio file")
-    model: str | None = Field(
-        None, description="Whisper model size (tiny, base, small, medium, large)"
-    )
+    model: str | None = Field(None, description="Whisper model size (tiny, base, small, medium, large)")
 
 
 class AudioTranslateResponse(BaseModel):
@@ -332,7 +304,9 @@ class CodeCompletionRequest(BaseModel):
     suffix: str = Field(default="", description="Code after the cursor")
     language: str | None = Field(None, description="Programming language (e.g., 'python', 'javascript')")
     model: str | None = Field(None, description="Code model to use (defaults to configured model)")
-    temperature: float | None = Field(None, ge=0.0, le=1.0, description="Sampling temperature (lower = more deterministic)")
+    temperature: float | None = Field(
+        None, ge=0.0, le=1.0, description="Sampling temperature (lower = more deterministic)"
+    )
     max_tokens: int | None = Field(None, gt=0, le=512, description="Maximum tokens to generate")
     stream: bool = Field(False, description="Stream the response for real-time completion")
 

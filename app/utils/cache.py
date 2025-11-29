@@ -198,9 +198,7 @@ class CacheClient:
                 "total_keys": self._client.dbsize(),
                 "hits": info.get("keyspace_hits", 0),
                 "misses": info.get("keyspace_misses", 0),
-                "hit_rate": self._calculate_hit_rate(
-                    info.get("keyspace_hits", 0), info.get("keyspace_misses", 0)
-                ),
+                "hit_rate": self._calculate_hit_rate(info.get("keyspace_hits", 0), info.get("keyspace_misses", 0)),
                 "memory_used_mb": round(memory_info.get("used_memory", 0) / 1024 / 1024, 2),
                 "memory_peak_mb": round(memory_info.get("used_memory_peak", 0) / 1024 / 1024, 2),
             }

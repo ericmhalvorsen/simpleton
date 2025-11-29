@@ -14,9 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 # Prometheus metrics
-REQUEST_COUNT = Counter(
-    "simpleton_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
-)
+REQUEST_COUNT = Counter("simpleton_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
 
 REQUEST_DURATION = Histogram(
     "simpleton_request_duration_seconds", "HTTP request duration in seconds", ["method", "endpoint"]
@@ -73,9 +71,7 @@ class MetricsStore:
 
         logger.info(f"Initialized metrics store with {retention_hours}h retention")
 
-    def record_request(
-        self, method: str, path: str, status_code: int, duration: float, error: str | None = None
-    ):
+    def record_request(self, method: str, path: str, status_code: int, duration: float, error: str | None = None):
         """Record a request"""
         now = datetime.now()
 
@@ -285,13 +281,9 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
             duration = time.time() - start_time
 
             # Update Prometheus metrics
-            REQUEST_COUNT.labels(
-                method=request.method, endpoint=request.url.path, status=status_code
-            ).inc()
+            REQUEST_COUNT.labels(method=request.method, endpoint=request.url.path, status=status_code).inc()
 
-            REQUEST_DURATION.labels(method=request.method, endpoint=request.url.path).observe(
-                duration
-            )
+            REQUEST_DURATION.labels(method=request.method, endpoint=request.url.path).observe(duration)
 
             REQUEST_IN_PROGRESS.dec()
 

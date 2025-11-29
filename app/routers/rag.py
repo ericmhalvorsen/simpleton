@@ -123,9 +123,7 @@ async def ingest_document(
         )
 
         if not chunks_with_metadata:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="No chunks generated from document"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No chunks generated from document")
 
         # Extract chunk texts
         chunk_texts = [chunk["content"] for chunk in chunks_with_metadata]
@@ -202,9 +200,7 @@ async def semantic_search(
 
         # Check collection exists
         if not qdrant.collection_exists(collection):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection '{collection}' not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection '{collection}' not found")
 
         # Generate query embedding
         logger.info("Generating embedding for query")
@@ -242,9 +238,7 @@ async def semantic_search(
         raise
     except Exception as e:
         logger.error(f"Semantic search failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Search failed: {str(e)}"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Search failed: {str(e)}")
 
 
 @router.post("/query", response_model=RAGQueryResponse)
@@ -273,9 +267,7 @@ async def rag_query(
 
         # Check collection exists
         if not qdrant.collection_exists(collection):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection '{collection}' not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection '{collection}' not found")
 
         # Step 1: Search for relevant chunks
         logger.info("Searching for relevant chunks")
@@ -285,9 +277,7 @@ async def rag_query(
         results = qdrant.search(collection_name=collection, query_vector=query_vector, top_k=top_k)
 
         if not results:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="No relevant documents found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No relevant documents found")
 
         # Step 2: Build context from retrieved chunks
         context_parts = []
@@ -357,9 +347,7 @@ Answer based on the context above:"""
         raise
     except Exception as e:
         logger.error(f"RAG query failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}")
 
 
 @router.get("/collections", response_model=CollectionsResponse)

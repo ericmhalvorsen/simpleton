@@ -315,9 +315,7 @@ async def upload_image_for_analysis(
             image = Image.open(BytesIO(content))
             image.verify()
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid image file: {str(e)}"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid image file: {str(e)}")
 
         # Convert to base64
         image_b64 = base64.b64encode(content).decode("utf-8")

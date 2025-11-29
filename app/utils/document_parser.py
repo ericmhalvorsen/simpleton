@@ -75,9 +75,7 @@ class DocumentParser:
         try:
             from docx import Document
         except ImportError:
-            raise ImportError(
-                "python-docx is required for DOCX parsing. Install with: pip install python-docx"
-            )
+            raise ImportError("python-docx is required for DOCX parsing. Install with: pip install python-docx")
 
         doc = Document(file_path)
         text_parts = []

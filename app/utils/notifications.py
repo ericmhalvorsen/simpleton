@@ -143,9 +143,7 @@ class NotificationService:
             logger.error(f"Telegram notification failed: {e}")
             return False
 
-    async def send_startup(
-        self, service_name: str = "Simpleton", host: str = "localhost", port: int = 8000
-    ):
+    async def send_startup(self, service_name: str = "Simpleton", host: str = "localhost", port: int = 8000):
         """Send startup notification"""
         await self.send(
             title=f"🚀 {service_name} Started",

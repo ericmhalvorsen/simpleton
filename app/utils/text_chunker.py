@@ -51,9 +51,7 @@ class TextChunker:
         return chunks
 
     @staticmethod
-    def chunk_by_sentences(
-        text: str, chunk_size: int = 1000, chunk_overlap: int = 200
-    ) -> list[str]:
+    def chunk_by_sentences(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> list[str]:
         """
         Split text into chunks by sentences, respecting chunk size
 
@@ -109,9 +107,7 @@ class TextChunker:
         return chunks
 
     @staticmethod
-    def chunk_by_paragraphs(
-        text: str, chunk_size: int = 1000, chunk_overlap: int = 200
-    ) -> list[str]:
+    def chunk_by_paragraphs(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> list[str]:
         """
         Split text into chunks by paragraphs, respecting chunk size
 
@@ -145,9 +141,7 @@ class TextChunker:
                     current_size = 0
 
                 # Split large paragraph by sentences
-                sentence_chunks = TextChunker.chunk_by_sentences(
-                    paragraph, chunk_size, chunk_overlap
-                )
+                sentence_chunks = TextChunker.chunk_by_sentences(paragraph, chunk_size, chunk_overlap)
                 chunks.extend(sentence_chunks)
                 continue
 
@@ -243,11 +237,7 @@ class TextChunker:
 
         for idx, chunk in enumerate(chunks):
             # Find chunk position in original text (approximate)
-            chunk_start = (
-                text.find(chunk[:50], char_offset)
-                if len(chunk) >= 50
-                else text.find(chunk, char_offset)
-            )
+            chunk_start = text.find(chunk[:50], char_offset) if len(chunk) >= 50 else text.find(chunk, char_offset)
             if chunk_start == -1:
                 chunk_start = char_offset
 

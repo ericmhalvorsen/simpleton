@@ -190,9 +190,7 @@ class QdrantVectorStore:
 
         # Create points
         points = []
-        for i, (doc_id, doc, embedding, meta) in enumerate(
-            zip(ids, documents, embeddings, metadata)
-        ):
+        for i, (doc_id, doc, embedding, meta) in enumerate(zip(ids, documents, embeddings, metadata)):
             # Add document text to metadata
             payload = {"text": doc, **meta}
 

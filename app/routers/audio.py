@@ -290,9 +290,7 @@ async def upload_and_transcribe(
         audio_b64 = base64.b64encode(content).decode("utf-8")
 
         # Create transcribe request
-        transcribe_request = AudioTranscribeRequest(
-            audio=audio_b64, language=language, model=model, task="transcribe"
-        )
+        transcribe_request = AudioTranscribeRequest(audio=audio_b64, language=language, model=model, task="transcribe")
 
         # Use the transcribe endpoint
         return await transcribe_audio(transcribe_request, api_key)
