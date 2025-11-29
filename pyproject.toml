@@ -21,6 +21,7 @@ dependencies = [
     "pydantic-settings>=2.1.0",
     "pydantic>=2.5.3",
     "pypdf>=3.17.0",
+    "pyright>=1.1.407",
     "python-docx>=1.1.0",
     "python-dotenv>=1.0.0",
     "python-multipart>=0.0.6",
@@ -58,3 +59,11 @@ ignore = ["E501"]  # Ignore line length (handled by formatter)
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.2",
+    "pytest>=9.0.1",
+    "ruff>=0.14.5",
+    "safety>=3.7.0",
+]

@@ -54,14 +54,10 @@ jobs:
         run: |
           uv run safety check --output bare || true
 
-      - name: Run mypy type checking
+      - name: Run type checking
         run: |
-          # Placeholder - uncomment when mypy is configured
-          # uv run mypy app/
-          echo "Type checking placeholder - mypy will be enabled when configured"
+          uv run pyright app/
 
       - name: Run pytest
         run: |
-          # Placeholder - uncomment when tests are added
-          # uv run pytest --cov=app --cov-report=term-missing
-          echo "Test placeholder - pytest will run when tests are added"
+          uv run pytest --cov=app --cov-report=term-missing
