@@ -5,8 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from functools import wraps
-from typing import Any, Dict, List, Optional, TypeVar, Union, cast, overload
+from typing import Any, Dict, Optional, TypeVar, cast
 
 from redis import Redis
 from redis.exceptions import RedisError
@@ -36,7 +35,7 @@ class CacheClient:
         if self.enabled:
             try:
                 self._client = Redis.from_url(redis_url, decode_responses=True)
-                if self._client == None:
+                if self._client is None:
                     raise RedisError("client failed to initialize")
 
                 self._client.ping()
