@@ -328,7 +328,7 @@ async def upload_image_for_analysis(
             prompt=prompt,
             model=model,
             temperature=0.7,  # Default temperature
-            max_tokens=512,   # Default max tokens
+            max_tokens=512,  # Default max tokens
         )
 
         # Use the analyze endpoint

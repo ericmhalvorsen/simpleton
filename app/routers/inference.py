@@ -97,9 +97,7 @@ async def generate_text(
                 response.raise_for_status()
                 data = response.json()
 
-                cache.set(
-                    "inference", cache_key_data, data, ttl=settings.cache_inference_ttl
-                )
+                cache.set("inference", cache_key_data, data, ttl=settings.cache_inference_ttl)
 
                 return InferenceResponse(**data)
 
@@ -185,9 +183,7 @@ async def chat_completion(
                 response.raise_for_status()
                 data = response.json()
 
-                cache.set(
-                    "chat", cache_key_data, data, ttl=settings.cache_inference_ttl
-                )
+                cache.set("chat", cache_key_data, data, ttl=settings.cache_inference_ttl)
 
                 return ChatResponse(**data)
 

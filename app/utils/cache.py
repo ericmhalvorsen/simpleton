@@ -87,9 +87,7 @@ class CacheClient:
             logger.error(f"Cache get error: {e}")
             return None
 
-    def set(
-        self, prefix: str, data: Dict[str, Any], value: Any, ttl: int = 3600
-    ) -> bool:
+    def set(self, prefix: str, data: Dict[str, Any], value: Any, ttl: int = 3600) -> bool:
         """
         Set cached value
 
@@ -156,10 +154,7 @@ class CacheClient:
         try:
             keys = await self._client.keys(f"{prefix}:*")
             if keys:
-                str_keys = [
-                    key.decode("utf-8") if isinstance(key, bytes) else key
-                    for key in keys
-                ]
+                str_keys = [key.decode("utf-8") if isinstance(key, bytes) else key for key in keys]
                 return cast(int, self._client.delete(*str_keys))  # type: ignore[attr-defined]
             return 0
         except (RedisError, AttributeError) as e:

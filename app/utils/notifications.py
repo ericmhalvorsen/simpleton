@@ -180,10 +180,9 @@ class NotificationService:
         # Ensure priority is one of the allowed literal values
         priority = priority_map.get(severity, "high")
         priority_literal: Literal["min", "low", "default", "high", "urgent"] = (
-            "high" if priority not in ["min", "low", "default", "high", "urgent"] 
-            else priority  # type: ignore
+            "high" if priority not in ["min", "low", "default", "high", "urgent"] else priority  # type: ignore
         )
-        
+
         await self.send(
             title=f"{emoji_map.get(severity, '⚠️')} Alert: {alert_type}",
             message=message,

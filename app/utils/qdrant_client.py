@@ -29,9 +29,7 @@ class QdrantVectorStore:
             url: Qdrant server URL
             api_key: Optional API key for authentication
         """
-        self.client = QdrantClient(
-            url=url, api_key=api_key if api_key else None, timeout=60
-        )
+        self.client = QdrantClient(url=url, api_key=api_key if api_key else None, timeout=60)
         logger.info(f"Initialized Qdrant client connected to {url}")
 
     def create_collection(
@@ -71,9 +69,7 @@ class QdrantVectorStore:
                 collection_name=collection_name,
                 vectors_config=VectorParams(size=vector_size, distance=distance),
             )
-            logger.info(
-                f"Created collection: {collection_name} with vector size {vector_size}"
-            )
+            logger.info(f"Created collection: {collection_name} with vector size {vector_size}")
             return True
 
         except Exception as e:
@@ -194,9 +190,7 @@ class QdrantVectorStore:
 
         # Create points
         points = []
-        for i, (doc_id, doc, embedding, meta) in enumerate(
-            zip(ids, documents, embeddings, metadata)
-        ):
+        for i, (doc_id, doc, embedding, meta) in enumerate(zip(ids, documents, embeddings, metadata)):
             # Add document text to metadata
             payload = {"text": doc, **meta}
 
@@ -205,9 +199,7 @@ class QdrantVectorStore:
         # Upload points to Qdrant
         try:
             self.client.upsert(collection_name=collection_name, points=points)
-            logger.info(
-                f"Added {len(points)} documents to collection {collection_name}"
-            )
+            logger.info(f"Added {len(points)} documents to collection {collection_name}")
             return ids
         except Exception as e:
             logger.error(f"Failed to add documents: {e}")
@@ -240,9 +232,7 @@ class QdrantVectorStore:
             if metadata_filter:
                 conditions = []
                 for key, value in metadata_filter.items():
-                    conditions.append(
-                        FieldCondition(key=key, match=MatchValue(value=value))
-                    )
+                    conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
                 if conditions:
                     query_filter = Filter(must=conditions)
 
@@ -269,9 +259,7 @@ class QdrantVectorStore:
                     }
                 )
 
-            logger.info(
-                f"Search returned {len(formatted_results)} results from {collection_name}"
-            )
+            logger.info(f"Search returned {len(formatted_results)} results from {collection_name}")
             return formatted_results
 
         except Exception as e:
@@ -291,9 +279,7 @@ class QdrantVectorStore:
         total = hits + misses
         return hits / total if total > 0 else 0.0
 
-    def get_document(
-        self, collection_name: str, document_id: str
-    ) -> dict[str, Any] | None:
+    def get_document(self, collection_name: str, document_id: str) -> dict[str, Any] | None:
         """
         Retrieve a specific document by ID
 
