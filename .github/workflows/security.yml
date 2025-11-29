@@ -5,20 +5,17 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
 
 jobs:
   trivy-repo:
-    name: Trivy Repository Scan
+    name: Repo Scan
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy repository scan
+      - name: Repo scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'repo'
@@ -34,15 +31,7 @@ jobs:
         with:
           sarif_file: 'trivy-repo-results.sarif'
 
-  trivy-fs:
-    name: Trivy Filesystem Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy filesystem scan
+      - name: FS scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
@@ -58,3 +47,16 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
+
+  shai-hulud:
+    name: Shai-Hulud
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Shai-Hulud 2.0 Detector
+        uses: gensecaihq/Shai-Hulud-2.0-Detector@v1
+        with:
+          fail-on-critical: true

@@ -19,8 +19,8 @@ on:
       - '.github/workflows/backend.yml'
 
 jobs:
-  lint:
-    name: Lint
+  checks:
+    name: Lints and Security
     runs-on: ubuntu-latest
 
     steps:
@@ -46,27 +46,6 @@ jobs:
       - name: Run ruff format check
         run: uv run ruff format --check app/
 
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies with dev extras
-        run: uv sync --extra dev
-
       - name: Run bandit security checks
         run: |
           uv run bandit -r app/ -ll || true
@@ -75,53 +54,11 @@ jobs:
         run: |
           uv run safety check --output bare || true
 
-  type-check:
-    name: Type Check
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: uv sync
-
       - name: Run mypy type checking
         run: |
           # Placeholder - uncomment when mypy is configured
           # uv run mypy app/
           echo "Type checking placeholder - mypy will be enabled when configured"
-
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies with dev extras
-        run: uv sync --extra dev
 
       - name: Run pytest
         run: |

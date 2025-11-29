@@ -14,7 +14,7 @@ on:
 
 jobs:
   lint:
-    name: Lint
+    name: Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -38,73 +38,15 @@ jobs:
         working-directory: frontend
         run: bun run eslint .
 
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: bun install --frozen-lockfile
-
       - name: Run npm audit
         working-directory: frontend
         run: bun pm audit || true
-
-  type-check:
-    name: Type Check
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: bun install --frozen-lockfile
 
       - name: Run svelte-check
         working-directory: frontend
         run: bun run check
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [lint, type-check]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: bun install --frozen-lockfile
-
       - name: Build production bundle
         working-directory: frontend
         run: bun run build
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/build
-          retention-days: 7
