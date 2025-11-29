@@ -114,8 +114,8 @@ async def create_embeddings(
 @router.post("/batch", response_model=EmbeddingResponse)
 async def create_batch_embeddings(
     texts: list[str],
+    api_key: RequireAPIKey,
     model: str | None = None,
-    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Generate embeddings for a batch of texts.

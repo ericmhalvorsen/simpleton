@@ -260,10 +260,10 @@ async def translate_audio(
 
 @router.post("/upload/transcribe")
 async def upload_and_transcribe(
+    api_key: RequireAPIKey,
     file: UploadFile = File(...),
     language: str | None = None,
     model: str | None = None,
-    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Upload an audio file and transcribe it.
@@ -307,9 +307,9 @@ async def upload_and_transcribe(
 
 @router.post("/upload/translate")
 async def upload_and_translate(
+    api_key: RequireAPIKey,
     file: UploadFile = File(...),
     model: str | None = None,
-    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Upload an audio file and translate it to English.

@@ -286,10 +286,10 @@ async def extract_text(
 
 @router.post("/upload")
 async def upload_image_for_analysis(
+    api_key: RequireAPIKey,
     file: UploadFile = File(...),
     prompt: str = "Describe this image",
     model: str | None = None,
-    api_key: RequireAPIKey = Security(validate_api_key),
 ):
     """
     Upload an image file and analyze it.
