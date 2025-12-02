@@ -20,15 +20,11 @@ services:
       context: ../ipex-llm/docker/llm/inference-cpp/
       dockerfile: Dockerfile
     restart: unless-stopped
+    network_mode: "host"
     devices:
       - /dev/dri:/dev/dri
     volumes:
       - ollama_data:/root/.ollama
-    ports:
-      - 11434:11434
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
     environment:
       - no_proxy=localhost,127.0.0.1
       - OLLAMA_HOST=0.0.0.0
