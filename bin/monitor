@@ -1,0 +1,127 @@
+#!/bin/bash
+
+# Intel Arc GPU Monitor for xe driver
+# Monitors power, VRAM usage, clocks, and temperature
+
+HWMON=/sys/class/drm/card1/device/hwmon/hwmon6
+VRAM_DEBUG=/sys/kernel/debug/dri/1/vram0_mm
+GPU_DEVICE=/sys/class/drm/card1/device
+INTERVAL=1
+
+# Fix terminal compatibility
+export TERM="${TERM:-xterm}"
+if ! tput colors &>/dev/null; then
+    export TERM=xterm
+fi
+
+# Check if running with sudo
+if [ ! -r "$VRAM_DEBUG" ]; then
+    echo "Error: Need sudo to read VRAM stats"
+    echo "Run with: sudo $0"
+    exit 1
+fi
+
+# Initialize for power calculation
+prev_energy=$(cat $HWMON/energy1_input 2>/dev/null || echo 0)
+prev_time=$(date +%s.%N)
+
+# Clear screen and hide cursor (with fallback if terminal not supported)
+clear
+tput civis 2>/dev/null || true
+trap 'tput cnorm 2>/dev/null; clear; exit' INT TERM
+
+echo "Intel Arc GPU Monitor (Battlemage G21)"
+echo "================================================"
+echo ""
+
+while true; do
+    sleep $INTERVAL
+
+    # Calculate power
+    curr_energy=$(cat $HWMON/energy1_input 2>/dev/null || echo 0)
+    curr_time=$(date +%s.%N)
+    energy_diff=$(echo "$curr_energy - $prev_energy" | bc)
+    time_diff=$(echo "$curr_time - $prev_time" | bc)
+    power=$(echo "scale=2; $energy_diff / $time_diff / 1000000" | bc 2>/dev/null || echo 0)
+
+    # Get VRAM usage (strip MiB suffix)
+    vram_total=$(grep "^visible_size:" $VRAM_DEBUG | awk '{print $2}' | sed 's/MiB//')
+    vram_avail=$(grep "^visible_avail:" $VRAM_DEBUG | awk '{print $2}' | sed 's/MiB//')
+    vram_used=$((vram_total - vram_avail))
+    vram_percent=$((vram_used * 100 / vram_total))
+
+    # Get fan speed
+    fan=$(cat $HWMON/fan1_input 2>/dev/null || echo 0)
+
+    # Get power cap
+    power_cap=$(cat $HWMON/power1_cap 2>/dev/null || echo 70000000)
+    power_cap_w=$(echo "scale=0; $power_cap / 1000000" | bc)
+
+    # Get GPU frequencies
+    gpu_freq_cur=$(cat $GPU_DEVICE/gt/gt0/freq_act 2>/dev/null || echo "N/A")
+    gpu_freq_max=$(cat $GPU_DEVICE/gt/gt0/freq_max 2>/dev/null || echo "N/A")
+
+    # Get temperature (check multiple possible locations)
+    temp="N/A"
+    if [ -f "$GPU_DEVICE/hwmon/hwmon6/temp1_input" ]; then
+        temp_raw=$(cat $GPU_DEVICE/hwmon/hwmon6/temp1_input)
+        temp=$((temp_raw / 1000))
+    elif [ -f "$GPU_DEVICE/hwmon/hwmon6/temp2_input" ]; then
+        temp_raw=$(cat $GPU_DEVICE/hwmon/hwmon6/temp2_input)
+        temp=$((temp_raw / 1000))
+    fi
+
+    # Get PCIe link info
+    pcie_speed=$(cat $GPU_DEVICE/current_link_speed 2>/dev/null | sed 's/ GT.*//' || echo "N/A")
+    pcie_width=$(cat $GPU_DEVICE/current_link_width 2>/dev/null || echo "N/A")
+
+    # Move cursor to start of output area
+    tput cup 3 0 2>/dev/null || printf "\033[4;0H"
+
+    # Display stats with fixed width
+    echo "┌────────────────────────────────────────────────┐"
+    printf "│ Power:    %6.2f W / %3d W                     │\n" $power $power_cap_w
+    printf "│ VRAM:     %5d MiB / %5d MiB  [%3d%%]        │\n" $vram_used $vram_total $vram_percent
+    printf "│ Fan:      %4d RPM                             │\n" $fan
+
+    if [ "$gpu_freq_cur" != "N/A" ]; then
+        freq_mhz=$((gpu_freq_cur / 1000000))
+        freq_max_mhz=$((gpu_freq_max / 1000000))
+        printf "│ GPU Freq: %4d MHz / %4d MHz               │\n" $freq_mhz $freq_max_mhz
+    else
+        printf "│ GPU Freq: N/A                                  │\n"
+    fi
+
+    if [ "$temp" != "N/A" ]; then
+        printf "│ Temp:     %3d°C                              │\n" $temp
+    else
+        printf "│ Temp:     N/A                                  │\n"
+    fi
+
+    printf "│ PCIe:     Gen%s x%s                            │\n" "$pcie_speed" "$pcie_width"
+    echo "└────────────────────────────────────────────────┘"
+    echo ""
+
+    # Draw VRAM bar with better characters
+    bar_width=40
+    vram_filled=$((vram_percent * bar_width / 100))
+    printf " VRAM   ["
+    for ((i=0; i<vram_filled; i++)); do printf "▓"; done
+    for ((i=vram_filled; i<bar_width; i++)); do printf "░"; done
+    printf "] %3d%%\n" $vram_percent
+
+    # Draw Power bar
+    power_percent=$(echo "scale=0; $power * 100 / $power_cap_w" | bc 2>/dev/null || echo 0)
+    if [ $power_percent -gt 100 ]; then power_percent=100; fi
+    power_filled=$((power_percent * bar_width / 100))
+    printf " Power  ["
+    for ((i=0; i<power_filled; i++)); do printf "▓"; done
+    for ((i=power_filled; i<bar_width; i++)); do printf "░"; done
+    printf "] %3d%%\n" $power_percent
+
+    echo ""
+    echo "Press Ctrl+C to exit"
+
+    prev_energy=$curr_energy
+    prev_time=$curr_time
+done

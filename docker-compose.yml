@@ -1,24 +1,26 @@
 version: '3.8'
 
 services:
-  ollama:
-    # image: ollama/ollama:latest
-    # devices:
-    #   - /dev/dri:/dev/dri
-    # container_name: simpleton-ollama
-    # # Removed port mapping to prevent direct access from host
-    # volumes:
-    #   - ollama_data:/root/.ollama
-    # restart: unless-stopped
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - /dev/dri:/dev/dri
-    # image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
-    build:
-      context: ../ipex-llm/docker/llm/inference-cpp/
-      dockerfile: Dockerfile
+  ollama-nvidia:
+    image: ollama/ollama:latest
+    container_name: simpleton-ollama-nvidia
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all # Or specify a number like 1
+              capabilities: [gpu]
+
+  ollama-intel:
+    # build:
+    #   context: ../ipex-llm/docker/llm/inference-cpp/
+    #   dockerfile: Dockerfile
+    image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
+    container_name: simpleton-ollama-intel
     restart: unless-stopped
     devices:
       - /dev/dri:/dev/dri
@@ -31,7 +33,8 @@ services:
       - OLLAMA_HOST=0.0.0.0
       - DEVICE=Arc
       - OLLAMA_INTEL_GPU=true
-      - OLLAMA_NUM_GPU=999
+      - OLLAMA_NUM_GPU=1
+      - OLLAMA_PARALLEL=1
       - HOSTNAME=ollama
       - ZES_ENABLE_SYSMAN=1
     command: sh -c 'mkdir -p /llm/ollama && cd /llm/ollama && init-ollama && exec ./ollama serve'
@@ -81,7 +84,7 @@ services:
       - ./pyproject.toml:/app/pyproject.toml
       - ./uv.lock:/app/uv.lock
     depends_on:
-      - ollama
+      - ollama-intel
       - qdrant
       - redis
       - ntfy
