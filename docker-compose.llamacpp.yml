@@ -1,0 +1,142 @@
+version: '3.8'
+
+# Multi-GPU llama.cpp setup with split mode (tensor parallelism)
+# This configuration enables distributing model layers across multiple GPUs
+
+services:
+  llamacpp:
+    build:
+      context: .
+      dockerfile: Dockerfile.llamacpp
+    container_name: simpleton-llamacpp
+    restart: unless-stopped
+
+    # GPU configuration - exposes all available NVIDIA GPUs to the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  # Use all available GPUs
+              capabilities: [gpu]
+
+    ports:
+      - "8080:8080"  # llama.cpp server API port
+
+    volumes:
+      # Mount directory for model files (GGUF format)
+      - ./models:/app/models
+      # Mount directory for any custom configuration
+      - ./config/llamacpp:/app/config
+
+    environment:
+      # CUDA settings for multi-GPU
+      - CUDA_VISIBLE_DEVICES=0,1,2,3  # Adjust based on number of GPUs
+
+      # llama.cpp will use these environment variables
+      # Split mode is enabled via command line args (see command below)
+      - GGML_CUDA_NO_PEER_COPY=0  # Enable peer-to-peer GPU memory access
+
+    # Command to run llama.cpp server with multi-GPU split mode
+    # --split-mode row: Distributes model layers row-wise across GPUs (tensor parallelism)
+    # --tensor-split: Comma-separated ratios for distributing compute across GPUs
+    # --n-gpu-layers: Number of layers to offload to GPU (-1 = all layers)
+    # --host: Bind to all interfaces
+    # --port: Server port
+    # --ctx-size: Context window size
+    # --model: Path to your GGUF model file
+    command: >
+      llama-server
+      --host 0.0.0.0
+      --port 8080
+      --model /app/models/model.gguf
+      --n-gpu-layers -1
+      --split-mode row
+      --tensor-split 1,1,1,1
+      --ctx-size 4096
+      --threads 8
+      --verbose
+
+    # Health check to ensure server is running
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Keep other services from your original setup
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ntfy_data:/var/cache/ntfy
+    command: serve
+    restart: unless-stopped
+
+  simpleton:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Update to use llama.cpp server instead of Ollama
+      - LLAMA_CPP_URL=http://llamacpp:8080
+      - QDRANT_URL=http://qdrant:6333
+      - REDIS_URL=redis://redis:6379
+      - NTFY_URL=http://ntfy:80
+      - API_KEYS=${API_KEYS:-changeme}
+    volumes:
+      - ./app:/app/app
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./uv.lock:/app/uv.lock
+    depends_on:
+      - llamacpp
+      - qdrant
+      - redis
+      - ntfy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: install
+    environment:
+      - VITE_API_BASE_URL=/api
+      - VITE_API_KEY=${API_KEYS:-changeme}
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - simpleton
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+    driver: local
+  redis_data:
+    driver: local
+  ntfy_data:
+    driver: local
