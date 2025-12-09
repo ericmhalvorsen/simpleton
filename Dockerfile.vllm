@@ -1,0 +1,95 @@
+# Multi-GPU vLLM Dockerfile
+# This Dockerfile builds vLLM with CUDA support for high-throughput multi-GPU inference
+# using tensor parallelism and PagedAttention for efficient memory management
+
+FROM nvidia/cuda:12.1.1-devel-ubuntu22.04 as builder
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    git \
+    build-essential \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.10 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 && \
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+
+WORKDIR /build
+
+# Install PyTorch with CUDA 12.1 support
+# This must match your CUDA version for optimal performance
+RUN pip install --no-cache-dir \
+    torch==2.1.2 \
+    torchvision==0.16.2 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Install vLLM from source for latest features and optimizations
+# Alternative: Use pip install vllm for stable release
+RUN pip install --no-cache-dir vllm==0.3.0
+
+# Runtime stage
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.10 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 && \
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+
+# Create non-root user
+RUN groupadd --system --gid 999 vllm && \
+    useradd --system --gid 999 --uid 999 --create-home vllm
+
+WORKDIR /app
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Create directories for models and cache
+RUN mkdir -p /app/models /app/cache /root/.cache/huggingface && \
+    chown -R vllm:vllm /app
+
+# Set HuggingFace cache directory
+ENV HF_HOME=/app/cache
+ENV TRANSFORMERS_CACHE=/app/cache
+ENV HF_DATASETS_CACHE=/app/cache
+
+# vLLM performance environment variables
+# VLLM_USE_MODELSCOPE: Use ModelScope instead of HuggingFace (set to 1 for China)
+ENV VLLM_USE_MODELSCOPE=0
+
+# NCCL settings for multi-GPU communication
+# These optimize GPU-to-GPU communication for tensor parallelism
+ENV NCCL_DEBUG=INFO
+ENV NCCL_IB_DISABLE=0
+ENV NCCL_NET_GDR_LEVEL=2
+
+# Expose default vLLM OpenAI API server port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+USER vllm
+
+# Default command - override in docker-compose for specific models
+# This shows help by default
+CMD ["python", "-m", "vllm.entrypoints.openai.api_server", "--help"]
