@@ -381,6 +381,168 @@ response = vllm.chat.completions.create(
 4. Parses model output using regex or the model's chat template
 5. Returns structured `tool_calls` objects
 
+#### vLLM's `--tool-call-parser`: The Bridge Between Model Output and Client
+
+The `--tool-call-parser` parameter is **the key component** that extracts structured tool calls from raw model output. Different models format tool calls differently, so vLLM needs model-specific parsers.
+
+**Starting vLLM with a tool parser**:
+```bash
+vllm serve meta-llama/Llama-3.1-70B-Instruct \
+  --tool-call-parser llama3_json \
+  --enable-auto-tool-choice
+```
+
+**Available parsers** (as of vLLM 0.3+):
+
+| Parser | Model Family | Format Used |
+|--------|-------------|-------------|
+| `llama3_json` | Llama 3.1+ | Built-in tool calling with special tokens |
+| `hermes` | Nous Hermes 2 Pro | `<tool_call>` XML-style tags |
+| `mistral` | Mistral/Mixtral | `[TOOL_CALLS]` markers |
+| `granite` | IBM Granite | Custom JSON format |
+| `internlm` | InternLM2 | Function call tags |
+
+**What the parser actually does**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Model Output (Raw Tokens)               │
+│  "<tool_call>{"name": "get_weather", "args": {...}}</tool>" │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Tool Call Parser                           │
+│  - Detects tool call markers/patterns                       │
+│  - Extracts function name and arguments                     │
+│  - Validates JSON syntax                                    │
+│  - Matches against provided tool schemas                    │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Structured Response (OpenAI format)             │
+│  {                                                           │
+│    "choices": [{                                             │
+│      "message": {                                            │
+│        "tool_calls": [{                                      │
+│          "function": {                                       │
+│            "name": "get_weather",                            │
+│            "arguments": "{\"location\": \"Paris\"}"          │
+│          }                                                   │
+│        }]                                                    │
+│      }                                                       │
+│    }]                                                        │
+│  }                                                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Example: Llama 3.1 Format**
+
+When you use `--tool-call-parser llama3_json`, the parser looks for this pattern:
+
+**Model generates** (raw tokens):
+```json
+{"name": "get_weather", "parameters": {"location": "Paris", "unit": "celsius"}}
+```
+
+**Parser extracts**:
+1. Detects JSON object in model output
+2. Validates it matches Llama 3.1's tool calling schema
+3. Extracts `name` field → function name
+4. Extracts `parameters` field → function arguments
+5. Generates unique `tool_call_id`
+
+**Client receives** (OpenAI-compatible format):
+```json
+{
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_abc123",
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "arguments": "{\"location\": \"Paris\", \"unit\": \"celsius\"}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }]
+}
+```
+
+**Example: Hermes Format**
+
+When you use `--tool-call-parser hermes`, the parser handles this format:
+
+**Model generates**:
+```xml
+<tool_call>
+{"name": "get_weather", "arguments": {"location": "Paris"}}
+</tool_call>
+```
+
+**Parser does**:
+1. Detects `<tool_call>` tags
+2. Extracts JSON between tags
+3. Parses function name and arguments
+4. Formats into OpenAI structure
+
+**Why different parsers exist**:
+
+Each model family was trained with different tool calling formats:
+
+- **Llama 3.1**: Trained with direct JSON output
+- **Hermes**: Trained with `<tool_call>` XML tags
+- **Mistral**: Trained with `[TOOL_CALLS]` array markers
+
+The parser knows the **exact format** that model was trained on and can reliably extract tool calls.
+
+**Without the right parser**:
+
+If you use the wrong parser (or none), vLLM might:
+- Miss tool calls entirely (return as regular text)
+- Parse incorrectly (extract wrong function name/args)
+- Fail to detect tool call markers
+- Return malformed JSON to client
+
+**Example - Wrong parser**:
+```python
+# Model: Hermes, Parser: llama3_json (wrong!)
+# Model outputs: <tool_call>{"name": "get_weather", ...}</tool_call>
+# Parser expects: {"name": "get_weather", ...} (no tags)
+# Result: Parser doesn't detect tags, returns as regular message content
+# Client sees: No tool_calls, just text "<tool_call>..."
+```
+
+**Configuring in docker-compose.vllm.yml**:
+
+```yaml
+command: >
+  python -m vllm.entrypoints.openai.api_server
+  --model meta-llama/Llama-3.1-70B-Instruct
+  --tool-call-parser llama3_json  # ← THIS LINE
+  --enable-auto-tool-choice
+```
+
+**Auto-detection**:
+
+Some vLLM versions try to auto-detect the parser based on model name:
+- `Llama-3.1` → `llama3_json`
+- `Hermes-2-Pro` → `hermes`
+- `Mistral` → `mistral`
+
+But explicit is better than implicit - always specify `--tool-call-parser` to avoid issues.
+
+**The parser is the "rosetta stone"** between:
+- What the **model** outputs (its specific format)
+- What the **client** expects (OpenAI-compatible structure)
+
+Without it, tool calling would require every client to manually parse different model formats. The parser centralizes this logic in the inference engine.
+
 ### llama.cpp
 ```bash
 # Supports function calling with --chat-template
