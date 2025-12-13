@@ -2,7 +2,7 @@
 # This Dockerfile builds llama.cpp with CUDA support for multi-GPU inference
 # using tensor parallelism (split mode)
 
-FROM nvidia/cuda:12.2.0-devel-ubuntu22.04 as builder
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04 AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     curl \
     wget \
+    nvcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone and build llama.cpp with CUDA support
@@ -20,9 +21,9 @@ RUN git clone https://github.com/ggerganov/llama.cpp.git && \
     mkdir build && \
     cd build && \
     cmake .. \
-        -DLLAMA_CUDA=ON \
-        -DLLAMA_CUDA_F16=ON \
-        -DCMAKE_CUDA_ARCHITECTURES=all && \
+    -DLLAMA_CUDA=ON \
+    -DLLAMA_CUDA_F16=ON \
+    -DCMAKE_CUDA_ARCHITECTURES=all && \
     cmake --build . --config Release -j$(nproc)
 
 # Runtime stage
