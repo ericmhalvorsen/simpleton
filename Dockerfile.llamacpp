@@ -1,0 +1,63 @@
+# Multi-GPU llama.cpp Dockerfile
+# This Dockerfile builds llama.cpp with CUDA support for multi-GPU inference
+# using tensor parallelism (split mode)
+
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04 AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    cmake \
+    curl \
+    wget \
+    nvcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone and build llama.cpp with CUDA support
+WORKDIR /build
+RUN git clone https://github.com/ggerganov/llama.cpp.git && \
+    cd llama.cpp && \
+    mkdir build && \
+    cd build && \
+    cmake .. \
+    -DLLAMA_CUDA=ON \
+    -DLLAMA_CUDA_F16=ON \
+    -DCMAKE_CUDA_ARCHITECTURES=all && \
+    cmake --build . --config Release -j$(nproc)
+
+# Runtime stage
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd --system --gid 999 llama && \
+    useradd --system --gid 999 --uid 999 --create-home llama
+
+WORKDIR /app
+
+# Copy llama.cpp binaries from builder
+COPY --from=builder /build/llama.cpp/build/bin/* /app/bin/
+COPY --from=builder /build/llama.cpp/build/libllama.so /app/lib/
+
+# Set library path
+ENV LD_LIBRARY_PATH=/app/lib:$LD_LIBRARY_PATH
+ENV PATH=/app/bin:$PATH
+
+# Create directories for models and config
+RUN mkdir -p /app/models /app/config && \
+    chown -R llama:llama /app
+
+# Expose default llama.cpp server port
+EXPOSE 8080
+
+USER llama
+
+# Default command runs the server
+# Override with docker-compose for specific configurations
+CMD ["llama-server", "--help"]

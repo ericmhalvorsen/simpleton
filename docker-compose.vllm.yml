@@ -1,0 +1,177 @@
+version: '3.8'
+
+# Multi-GPU vLLM setup with tensor parallelism and PagedAttention
+# This configuration optimizes for high-throughput serving with multiple concurrent users
+
+services:
+  vllm:
+    build:
+      context: .
+      dockerfile: Dockerfile.vllm
+    container_name: simpleton-vllm
+    restart: unless-stopped
+
+    # GPU configuration - exposes all available NVIDIA GPUs to the container
+    # Note: vLLM only supports NVIDIA GPUs (CUDA). Intel Arc GPUs will be ignored.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  # Use all available NVIDIA GPUs
+              capabilities: [gpu]
+
+    ports:
+      - "8000:8000"  # vLLM OpenAI-compatible API server port
+
+    volumes:
+      # HuggingFace cache for model downloads
+      - vllm_cache:/app/cache
+      # Optional: Mount local models directory
+      # - ./models:/app/models
+
+    environment:
+      # GPU visibility - only NVIDIA GPUs (vLLM doesn't support Intel Arc)
+      - CUDA_VISIBLE_DEVICES=0,1,2,3  # Adjust based on number of NVIDIA GPUs
+
+      # HuggingFace settings
+      - HF_HOME=/app/cache
+      - TRANSFORMERS_CACHE=/app/cache
+      - HF_TOKEN=${HF_TOKEN:-}  # Optional: Set in .env for gated models (Llama, etc.)
+
+      # NCCL settings for multi-GPU communication
+      # Optimizes GPU-to-GPU data transfer for tensor parallelism
+      - NCCL_DEBUG=WARN  # Set to INFO for debugging
+      - NCCL_IB_DISABLE=0  # Enable InfiniBand if available
+      - NCCL_P2P_DISABLE=0  # Enable peer-to-peer GPU communication
+      - NCCL_SHM_DISABLE=0  # Enable shared memory
+
+      # Performance tuning
+      - VLLM_USE_MODELSCOPE=0  # Use HuggingFace (set to 1 for ModelScope in China)
+
+    # Command to run vLLM server with multi-GPU tensor parallelism
+    #
+    # Key parameters explained:
+    # --model: HuggingFace model ID or local path
+    # --tensor-parallel-size: Number of GPUs for tensor parallelism (auto-distributes model)
+    # --max-model-len: Maximum sequence length (context window)
+    # --gpu-memory-utilization: Fraction of GPU memory to use (0.9 = 90%)
+    # --max-num-seqs: Maximum number of sequences to process in parallel (batching)
+    # --disable-log-requests: Reduce logging verbosity
+    # --trust-remote-code: Allow custom model code (needed for some models)
+    #
+    # PagedAttention (automatic):
+    # - vLLM automatically uses PagedAttention for efficient KV cache management
+    # - No manual configuration needed
+    # - Typically achieves 2-4x higher throughput than naive implementation
+    #
+    # Tensor Parallelism (via --tensor-parallel-size):
+    # - Automatically distributes model layers across GPUs
+    # - Each GPU processes a portion of the weight matrices
+    # - Synchronized via NCCL (NVIDIA Collective Communications Library)
+    # - Works best with NVLink for fast GPU-to-GPU communication
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --host 0.0.0.0
+      --port 8000
+      --model meta-llama/Llama-2-70b-chat-hf
+      --tensor-parallel-size 4
+      --max-model-len 4096
+      --gpu-memory-utilization 0.90
+      --max-num-seqs 256
+      --disable-log-requests
+      --trust-remote-code
+
+    # Health check to ensure server is running
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # vLLM takes longer to start (model loading)
+
+    # Resource limits (optional)
+    # Uncomment to limit CPU/memory usage
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '16'
+    #       memory: 64G
+
+  # Keep other services from your original setup
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    ports:
+      - "8081:80"  # Changed from 8080 to avoid conflict with vLLM
+    volumes:
+      - ntfy_data:/var/cache/ntfy
+    command: serve
+    restart: unless-stopped
+
+  simpleton:
+    build: .
+    ports:
+      - "8001:8000"  # Changed from 8000 to avoid conflict with vLLM
+    env_file:
+      - .env
+    environment:
+      # Update to use vLLM server instead of Ollama/llama.cpp
+      - VLLM_URL=http://vllm:8000
+      - QDRANT_URL=http://qdrant:6333
+      - REDIS_URL=redis://redis:6379
+      - NTFY_URL=http://ntfy:80
+      - API_KEYS=${API_KEYS:-changeme}
+    volumes:
+      - ./app:/app/app
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./uv.lock:/app/uv.lock
+    depends_on:
+      - vllm
+      - qdrant
+      - redis
+      - ntfy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: install
+    environment:
+      - VITE_API_BASE_URL=/api
+      - VITE_API_KEY=${API_KEYS:-changeme}
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - simpleton
+    restart: unless-stopped
+
+volumes:
+  vllm_cache:
+    driver: local
+  qdrant_data:
+    driver: local
+  redis_data:
+    driver: local
+  ntfy_data:
+    driver: local
